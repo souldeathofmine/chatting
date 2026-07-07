@@ -1,0 +1,50 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          50: '#eff6ff',
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          300: '#93c5fd',
+          400: '#60a5fa',
+          500: '#3b82f6',
+          600: '#2563eb',
+          700: '#1d4ed8',
+          800: '#1e40af',
+          900: '#1e3a8a',
+        },
+        dark: {
+          50: 'var(--dark-50)',
+          100: 'var(--dark-100)',
+          200: 'var(--dark-200)',
+          300: 'var(--dark-300)',
+          400: 'var(--dark-400)',
+          500: 'var(--dark-500)',
+          600: 'var(--dark-600)',
+          700: 'var(--dark-700)',
+          800: 'var(--dark-800)',
+          900: 'var(--dark-900)',
+          950: 'var(--dark-950)',
+        },
+        gray: {
+          50: 'var(--gray-50)',
+          100: 'var(--gray-100)',
+          200: 'var(--gray-200)',
+          300: 'var(--gray-300)',
+          400: 'var(--gray-400)',
+          500: 'var(--gray-500)',
+          600: 'var(--gray-600)',
+          700: 'var(--gray-700)',
+          800: 'var(--gray-800)',
+          900: 'var(--gray-900)',
+          950: 'var(--gray-950)',
+        },
+      },
+    },
+  },
+  plugins: [],
+};
