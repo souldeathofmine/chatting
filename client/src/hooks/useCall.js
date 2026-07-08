@@ -57,6 +57,12 @@ export const useCall = (user) => {
     if (remoteContainerRef.current) remoteContainerRef.current.srcObject = null;
   }, []);
 
+  const callState = useCallStore((s) => s.callState);
+
+  useEffect(() => {
+    if (callState === 'connected') attachStreams();
+  }, [callState, attachStreams]);
+
   const cleanup = useCallback(() => {
     cleanupMedia();
     incomingCallRef.current = null;
@@ -65,7 +71,12 @@ export const useCall = (user) => {
   }, [cleanupMedia, resetCall]);
 
   const initCall = useCallback(async (roomName, type, remoteStreamId) => {
-    const VDONinjaSDK = await loadSDK();
+    let VDONinjaSDK;
+    try {
+      VDONinjaSDK = await loadSDK();
+    } catch (e) {
+      throw new Error('Failed to load VDO.Ninja SDK: ' + e.message);
+    }
     const vdo = new VDONinjaSDK();
     vdoRef.current = vdo;
 
@@ -85,8 +96,6 @@ export const useCall = (user) => {
       video: type === 'video',
     });
     localStreamRef.current = localStream;
-
-    attachStreams();
 
     await vdo.connect();
     await vdo.joinRoom({ room: roomName });
@@ -117,6 +126,7 @@ export const useCall = (user) => {
         callType: type,
       });
     } catch (err) {
+      console.error('startCall error:', err);
       toast.error('Failed to start call');
       cleanup();
     }
@@ -134,6 +144,7 @@ export const useCall = (user) => {
       setCallState('connected');
       getSocket()?.emit('call_accepted', { to: incoming.from, roomName: incoming.roomName, callType: type });
     } catch (err) {
+      console.error('acceptCall error:', err);
       toast.error('Failed to accept call');
       cleanup();
     }
