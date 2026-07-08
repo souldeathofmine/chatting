@@ -1,43 +1,24 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { HiCamera, HiCheck } from 'react-icons/hi';
+import { HiCheck } from 'react-icons/hi';
 import useStore from '../store/useStore.js';
 import { userAPI } from '../services/api.js';
-import { uploadFile } from '../utils/upload.js';
 
 const OnboardingPage = () => {
   const [step, setStep] = useState(0);
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
-  const [photoURL, setPhotoURL] = useState('');
-  const [photoFile, setPhotoFile] = useState(null);
-  const [photoPreview, setPhotoPreview] = useState('');
   const [saving, setSaving] = useState(false);
 
   const setStoreUser = useStore((s) => s.setUser);
   const navigate = useNavigate();
-  const fileInputRef = useRef(null);
 
   const steps = [
     { title: 'Welcome!', subtitle: 'Let\'s set up your profile' },
     { title: 'Pick a username', subtitle: 'This is how others will see you' },
-    { title: 'Add a photo', subtitle: 'Make your profile recognizable' },
     { title: 'About you', subtitle: 'Write a short bio (optional)' },
   ];
-
-  const handlePhotoSelect = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image');
-      return;
-    }
-    setPhotoFile(file);
-    const reader = new FileReader();
-    reader.onload = (ev) => setPhotoPreview(ev.target.result);
-    reader.readAsDataURL(file);
-  };
 
   const handleFinish = async () => {
     if (username.trim().length < 3) {
@@ -48,15 +29,9 @@ const OnboardingPage = () => {
 
     setSaving(true);
     try {
-      let finalPhotoURL = photoURL;
-      if (photoFile) {
-        finalPhotoURL = await uploadFile(photoFile, 'avatars');
-      }
-
       const res = await userAPI.updateProfile({
         username: username.trim(),
         bio: bio.trim(),
-        photoURL: finalPhotoURL,
         onboardingComplete: true,
       });
 
@@ -135,38 +110,6 @@ const OnboardingPage = () => {
           )}
 
           {step === 2 && (
-            <div className="py-4 text-center">
-              <h2 className="text-2xl font-bold mb-2">{steps[step].title}</h2>
-              <p className="text-gray-400 mb-6">{steps[step].subtitle}</p>
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="relative w-32 h-32 mx-auto rounded-full bg-dark-700 flex items-center justify-center cursor-pointer hover:bg-dark-600 transition-colors group overflow-hidden"
-              >
-                {photoPreview ? (
-                  <img src={photoPreview} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <HiCamera className="text-4xl text-gray-500 group-hover:text-gray-300 transition-colors" />
-                )}
-                <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <HiCamera className="text-3xl text-white" />
-                </div>
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handlePhotoSelect}
-                className="hidden"
-              />
-              <div className="flex gap-3 mt-8">
-                <button onClick={handleNext} className="btn-primary flex-1 py-3">
-                  {photoPreview ? 'Looks good!' : 'Skip'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
             <div className="py-4">
               <h2 className="text-2xl font-bold mb-2">{steps[step].title}</h2>
               <p className="text-gray-400 mb-6">{steps[step].subtitle}</p>
