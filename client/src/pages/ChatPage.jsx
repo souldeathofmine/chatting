@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useSocket } from '../hooks/useSocket.js';
+import { useCall } from '../hooks/useCall.js';
 import useStore from '../store/useStore.js';
 import { chatAPI, userAPI } from '../services/api.js';
 import Sidebar from '../components/Sidebar.jsx';
 import ChatPanel from '../components/ChatPanel.jsx';
 import ProfilePanel from '../components/ProfilePanel.jsx';
 import AdminPanel from './AdminPanel.jsx';
+import CallOverlay from '../components/CallOverlay.jsx';
 import { getSocket } from '../services/socket.js';
 
 const ChatPage = () => {
@@ -17,6 +19,7 @@ const ChatPage = () => {
   const [showAdmin, setShowAdmin] = useState(false);
 
   const { emitMessageSeen } = useSocket(user?._id);
+  const callActions = useCall(user?._id);
 
   useEffect(() => {
     if (!user || showAdmin) return;
@@ -66,8 +69,9 @@ const ChatPage = () => {
   return (
     <div className="h-screen flex bg-dark-950 overflow-hidden">
       <Sidebar onProfileClick={() => { setProfileUserId(null); setShowProfile(true); }} onAdminClick={() => setShowAdmin(true)} />
-      <ChatPanel onProfileClick={(userId) => { setProfileUserId(userId || null); setShowProfile(true); }} />
+      <ChatPanel onProfileClick={(userId) => { setProfileUserId(userId || null); setShowProfile(true); }} callActions={callActions} />
       {showProfile && <ProfilePanel onClose={() => setShowProfile(false)} profileUserId={profileUserId} />}
+      <CallOverlay callActions={callActions} />
     </div>
   );
 };

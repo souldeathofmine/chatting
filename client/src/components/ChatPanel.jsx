@@ -5,9 +5,10 @@ import { messageAPI, chatAPI } from '../services/api.js';
 import { getSocket } from '../services/socket.js';
 import MessageBubble from './MessageBubble.jsx';
 import MessageInput from './MessageInput.jsx';
+import CallButton from './CallButton.jsx';
 import toast from 'react-hot-toast';
 
-const ChatPanel = ({ onProfileClick }) => {
+const ChatPanel = ({ onProfileClick, callActions }) => {
   const {
     user,
     currentChat,
@@ -193,6 +194,8 @@ const ChatPanel = ({ onProfileClick }) => {
             </p>
           </div>
         </div>
+
+        <CallButton receiverId={otherUser?._id} receiverInfo={otherUser} callActions={callActions} />
 
         <div className="relative" ref={menuRef}>
           <button

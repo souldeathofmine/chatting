@@ -31,6 +31,7 @@ export const setupSocket = (httpServer) => {
 
     socket.on('join_chat', ({ userId }) => {
       if (!userId) return;
+      socket.userId = userId;
       socket.join(`user:${userId}`);
 
       if (!onlineUsers.has(userId)) {
@@ -152,6 +153,35 @@ export const setupSocket = (httpServer) => {
 
     socket.on('stop_typing', ({ chatId, userId }) => {
       socket.to(`chat:${chatId}`).emit('stop_typing', { chatId, userId });
+    });
+
+    socket.on('call_user', ({ to, callerInfo, offer }) => {
+      if (!socket.userId || !to) return;
+      io.to(`user:${to}`).emit('incoming_call', {
+        from: socket.userId,
+        callerInfo,
+        offer,
+      });
+    });
+
+    socket.on('call_accepted', ({ to, answer }) => {
+      if (!socket.userId || !to) return;
+      io.to(`user:${to}`).emit('call_accepted', { answer });
+    });
+
+    socket.on('ice_candidate', ({ to, candidate }) => {
+      if (!socket.userId || !to) return;
+      io.to(`user:${to}`).emit('ice_candidate', { candidate });
+    });
+
+    socket.on('call_ended', ({ to }) => {
+      if (!socket.userId || !to) return;
+      io.to(`user:${to}`).emit('call_ended', { from: socket.userId });
+    });
+
+    socket.on('call_declined', ({ to }) => {
+      if (!socket.userId || !to) return;
+      io.to(`user:${to}`).emit('call_declined', { from: socket.userId });
     });
 
     socket.on('disconnect', async () => {
