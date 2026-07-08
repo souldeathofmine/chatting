@@ -3,7 +3,6 @@ import toast from 'react-hot-toast';
 import { FcGoogle } from 'react-icons/fc';
 import { HiMail, HiLockClosed } from 'react-icons/hi';
 import useAuth from '../hooks/useAuth.js';
-import Captcha from '../components/Captcha.jsx';
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -12,9 +11,8 @@ const AuthPage = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [resetMode, setResetMode] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState(null);
 
-  const { signInWithGoogle, signInWithEmail, registerWithEmail, resetPassword, setCaptchaToken: setStoreCaptchaToken, loading: authLoading } = useAuth();
+  const { signInWithGoogle, signInWithEmail, registerWithEmail, resetPassword, loading: authLoading } = useAuth();
 
   if (authLoading) {
     return (
@@ -57,12 +55,6 @@ const AuthPage = () => {
         await signInWithEmail(email, password);
         toast.success('Logged in!');
       } else {
-        if (!captchaToken) {
-          toast.error('Please complete the captcha');
-          setLoading(false);
-          return;
-        }
-        setStoreCaptchaToken(captchaToken);
         await registerWithEmail(email, password);
         toast.success('Account created!');
       }
@@ -198,16 +190,18 @@ const AuthPage = () => {
               </div>
             )}
 
-            {!isLogin && (
-              <Captcha
-                onVerify={(token) => setCaptchaToken(token)}
-                onExpire={() => setCaptchaToken(null)}
-              />
-            )}
+            <input
+              type="text"
+              name="website"
+              autoComplete="off"
+              tabIndex={-1}
+              className="opacity-0 absolute -z-10 h-0 w-0"
+              style={{ position: 'absolute', left: '-9999px' }}
+            />
 
             <button
               type="submit"
-              disabled={loading || (!isLogin && !captchaToken)}
+              disabled={loading}
               className="btn-primary w-full py-3"
             >
               {loading ? (

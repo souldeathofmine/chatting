@@ -37,6 +37,13 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
+const syncLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  message: 'Too many sign-up attempts, please try again later.',
+});
+app.use('/api/auth/sync-user', syncLimiter);
+
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
