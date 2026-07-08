@@ -6,7 +6,7 @@ import useCallStore from '../store/callStore.js';
 
 const JITSI_DOMAIN = 'meet.jit.si';
 
-const CallOverlay = ({ callActions }) => {
+const CallOverlay = ({ callActions, user }) => {
   const { callState, callerInfo, isCaller, callType, roomName } = useCallStore();
   const [duration, setDuration] = useState(0);
   const jitsiContainerRef = useRef(null);
@@ -44,7 +44,10 @@ const CallOverlay = ({ callActions }) => {
       parentNode: jitsiContainerRef.current,
       width: '100%',
       height: '100%',
-      configOverrides: {
+      userInfo: {
+        displayName: user?.username || 'Guest',
+      },
+      configOverwrite: {
         startWithAudioMuted: false,
         startWithVideoMuted: !isVideo,
         disableDeepLinking: true,

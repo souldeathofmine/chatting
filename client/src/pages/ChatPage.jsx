@@ -71,7 +71,7 @@ const ChatPage = () => {
       <Sidebar onProfileClick={() => { setProfileUserId(null); setShowProfile(true); }} onAdminClick={() => setShowAdmin(true)} />
       <ChatPanel onProfileClick={(userId) => { setProfileUserId(userId || null); setShowProfile(true); }} callActions={callActions} />
       {showProfile && <ProfilePanel onClose={() => setShowProfile(false)} profileUserId={profileUserId} />}
-      <CallOverlay callActions={callActions} />
+      <CallOverlay callActions={callActions} user={user} />
     </div>
   );
 };
