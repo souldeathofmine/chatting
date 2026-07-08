@@ -111,7 +111,7 @@ const useStore = create((set, get) => ({
       chats: state.chats.map((c) =>
         c._id === chatId ? { ...c, lastMessage: '', lastMessageTime: null, lastSender: null } : c
       ),
-      messages: state.currentChat?._id === chatId ? [] : state.messages,
+      messages: state.messages.length > 0 && state.messages[0]?.chatId === chatId ? [] : state.messages,
     })),
 }));
 

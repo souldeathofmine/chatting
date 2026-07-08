@@ -11,7 +11,7 @@ import { getSocket } from '../services/socket.js';
 
 const ChatPage = () => {
   const user = useStore((s) => s.user);
-  const { setUsers, setChats, setCurrentChat, setMessages, setOnlineUsers, currentChat } = useStore();
+  const { setUsers, setChats, setCurrentChat, setMessages, currentChat } = useStore();
   const [showProfile, setShowProfile] = useState(false);
   const [profileUserId, setProfileUserId] = useState(null);
   const [showAdmin, setShowAdmin] = useState(false);
@@ -29,11 +29,6 @@ const ChatPage = () => {
         ]);
         setUsers(usersRes.data);
         setChats(chatsRes.data);
-
-        const onlineUserIds = usersRes.data
-          .filter((u) => u.online)
-          .map((u) => u._id);
-        setOnlineUsers(onlineUserIds);
       } catch (error) {
         console.error('Failed to fetch initial data:', error);
         toast.error('Could not load users. Is the server running?');

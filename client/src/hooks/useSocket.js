@@ -9,6 +9,7 @@ export const useSocket = (userId) => {
     removeMessage,
     addOnlineUser,
     removeOnlineUser,
+    setOnlineUsers,
     setTyping,
     updateChatLastMessage,
     incrementUnread,
@@ -22,7 +23,9 @@ export const useSocket = (userId) => {
     const socket = connectSocket(userId);
 
     socket.on('receive_message', (message) => {
-      addMessage(message);
+      if (currentChat?._id === message.chatId) {
+        addMessage(message);
+      }
       updateChatLastMessage(
         message.chatId,
         message.message || (message.messageType === 'image' ? '📷 Image' : '📎 File'),
@@ -34,7 +37,7 @@ export const useSocket = (userId) => {
         incrementUnread(message.chatId);
       }
 
-      if (Notification.permission === 'granted') {
+      if (Notification.permission === 'granted' && currentChat?._id !== message.chatId) {
         const senderName = message.sender?.username || 'Someone';
         new Notification(senderName, {
           body: message.message || (message.messageType === 'image' ? 'Sent an image' : 'Sent a file'),
@@ -51,6 +54,10 @@ export const useSocket = (userId) => {
 
     socket.on('message_deleted', ({ msgId, chatId }) => {
       removeMessage(msgId);
+    });
+
+    socket.on('online_users', ({ userIds }) => {
+      setOnlineUsers(userIds);
     });
 
     socket.on('user_online', ({ userId: onlineUserId }) => {
@@ -73,6 +80,7 @@ export const useSocket = (userId) => {
       socket.off('receive_message');
       socket.off('message_seen');
       socket.off('message_deleted');
+      socket.off('online_users');
       socket.off('user_online');
       socket.off('user_offline');
       socket.off('typing');

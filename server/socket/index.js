@@ -32,9 +32,15 @@ export const setupSocket = (httpServer) => {
     socket.on('join_chat', ({ userId }) => {
       if (!userId) return;
       socket.join(`user:${userId}`);
-      onlineUsers.set(userId, socket.id);
-      io.emit('user_online', { userId });
-      updateUserStatus(userId, { online: true, lastSeen: new Date() });
+
+      if (!onlineUsers.has(userId)) {
+        onlineUsers.set(userId, new Set());
+        io.emit('user_online', { userId });
+        updateUserStatus(userId, { online: true, lastSeen: new Date() });
+      }
+      onlineUsers.get(userId).add(socket.id);
+
+      socket.emit('online_users', { userIds: Array.from(onlineUsers.keys()) });
     });
 
     socket.on('send_message', async (data) => {
@@ -152,28 +158,20 @@ export const setupSocket = (httpServer) => {
       console.log('User disconnected:', socket.id);
 
       let disconnectedUserId = null;
-      for (const [userId, socketId] of onlineUsers.entries()) {
-        if (socketId === socket.id) {
-          disconnectedUserId = userId;
-          onlineUsers.delete(userId);
+      for (const [userId, socketIds] of onlineUsers.entries()) {
+        if (socketIds.has(socket.id)) {
+          socketIds.delete(socket.id);
+          if (socketIds.size === 0) {
+            disconnectedUserId = userId;
+            onlineUsers.delete(userId);
+          }
           break;
         }
       }
 
       if (disconnectedUserId) {
-        let stillConnected = false;
-        const sockets = await io.sockets.sockets;
-        for (const [id, sock] of sockets) {
-          if (sock.rooms.has(`user:${disconnectedUserId}`) && sock.id !== socket.id) {
-            stillConnected = true;
-            break;
-          }
-        }
-
-        if (!stillConnected) {
-          io.emit('user_offline', { userId: disconnectedUserId });
-          updateUserStatus(disconnectedUserId, { online: false, lastSeen: new Date() });
-        }
+        io.emit('user_offline', { userId: disconnectedUserId });
+        updateUserStatus(disconnectedUserId, { online: false, lastSeen: new Date() });
       }
     });
   });
