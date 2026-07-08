@@ -1,9 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
-import { HiX, HiCamera, HiLogout, HiMail, HiCalendar } from 'react-icons/hi';
+import { useState, useEffect } from 'react';
+import { HiX, HiLogout, HiMail, HiCalendar, HiLockClosed } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import useStore from '../store/useStore.js';
-import { userAPI } from '../services/api.js';
-import { uploadFile } from '../utils/upload.js';
+import { userAPI, authAPI } from '../services/api.js';
 import { auth, signOut } from '../services/firebase.js';
 import { disconnectSocket } from '../services/socket.js';
 
@@ -14,8 +13,10 @@ const ProfilePanel = ({ onClose, profileUserId }) => {
   const [username, setUsername] = useState(currentUser?.username || '');
   const [bio, setBio] = useState(currentUser?.bio || '');
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef(null);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const isOwnProfile = !profileUserId || profileUserId === currentUser?._id;
 
@@ -31,27 +32,6 @@ const ProfilePanel = ({ onClose, profileUserId }) => {
 
   const user = isOwnProfile ? currentUser : profileUser;
 
-  const handlePhotoChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image');
-      return;
-    }
-    try {
-      setUploading(true);
-      const photoURL = await uploadFile(file, 'avatars');
-      const res = await userAPI.updateProfile({ photoURL });
-      setUser(res.data.user);
-      toast.success('Profile picture updated');
-    } catch (err) {
-      toast.error('Failed to upload photo');
-    } finally {
-      setUploading(false);
-      e.target.value = '';
-    }
-  };
-
   const handleSave = async () => {
     if (username.trim().length < 3) {
       toast.error('Username must be at least 3 characters');
@@ -66,6 +46,26 @@ const ProfilePanel = ({ onClose, profileUserId }) => {
       toast.error('Failed to update profile');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    try {
+      setChangingPassword(true);
+      await authAPI.changePassword({ currentPassword, newPassword });
+      toast.success('Password changed successfully');
+      setShowPasswordForm(false);
+      setCurrentPassword('');
+      setNewPassword('');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to change password');
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -98,36 +98,15 @@ const ProfilePanel = ({ onClose, profileUserId }) => {
         ) : (
           <div className="p-6">
             <div className="flex flex-col items-center mb-8">
-              <div className={`relative ${isOwnProfile ? 'group cursor-pointer' : ''}`} onClick={() => isOwnProfile && fileInputRef.current?.click()}>
-                <div className="w-24 h-24 rounded-full bg-primary-600/20 flex items-center justify-center overflow-hidden">
-                  {user?.photoURL ? (
-                    <img src={user.photoURL} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-3xl font-semibold text-primary-400">
-                      {user?.username?.charAt(0).toUpperCase()}
-                    </span>
-                  )}
-                </div>
-                {isOwnProfile && (
-                  <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <HiCamera className="text-2xl text-white" />
-                  </div>
-                )}
-                {uploading && (
-                  <div className="absolute inset-0 rounded-full bg-black/70 flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white" />
-                  </div>
+              <div className="w-24 h-24 rounded-full bg-primary-600/20 flex items-center justify-center overflow-hidden">
+                {user?.photoURL ? (
+                  <img src={user.photoURL} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-3xl font-semibold text-primary-400">
+                    {user?.username?.charAt(0).toUpperCase()}
+                  </span>
                 )}
               </div>
-              {isOwnProfile && (
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePhotoChange}
-                  className="hidden"
-                />
-              )}
               <h3 className="mt-4 text-lg font-semibold">{user?.username}</h3>
               <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
                 <HiMail className="text-xs" /> {user?.email}
@@ -182,6 +161,45 @@ const ProfilePanel = ({ onClose, profileUserId }) => {
                   >
                     {saving ? 'Saving...' : 'Save Changes'}
                   </button>
+
+                  <div className="border-t border-dark-700 pt-4">
+                    <button
+                      onClick={() => setShowPasswordForm(!showPasswordForm)}
+                      className="flex items-center justify-center gap-2 text-gray-400 hover:text-primary-400 w-full py-3 rounded-lg hover:bg-dark-800 transition-colors"
+                    >
+                      <HiLockClosed className="text-lg" />
+                      {showPasswordForm ? 'Cancel' : 'Change Password'}
+                    </button>
+
+                    {showPasswordForm && (
+                      <form onSubmit={handleChangePassword} className="mt-4 space-y-3">
+                        <input
+                          type="password"
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          placeholder="Current password"
+                          className="input-field"
+                          required
+                        />
+                        <input
+                          type="password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="New password (min 6 chars)"
+                          className="input-field"
+                          required
+                          minLength={6}
+                        />
+                        <button
+                          type="submit"
+                          disabled={changingPassword || !currentPassword || !newPassword}
+                          className="btn-primary w-full py-3"
+                        >
+                          {changingPassword ? 'Changing...' : 'Update Password'}
+                        </button>
+                      </form>
+                    )}
+                  </div>
 
                   <div className="pt-4 border-t border-dark-700">
                     <button

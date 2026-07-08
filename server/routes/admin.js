@@ -9,6 +9,7 @@ import {
   getChatMessages,
   getAllMessages,
   deleteChat,
+  changeUserPassword,
   deleteAnyMessage,
 } from '../controllers/adminController.js';
 
@@ -19,6 +20,7 @@ router.use(verifyFirebaseToken, requireAdmin);
 router.get('/users', getAllUsers);
 router.get('/users/:id', getUserDetail);
 router.delete('/users/:id', deleteUser);
+router.put('/users/:id/change-password', changeUserPassword);
 router.get('/users/:id/chats', getUserChats);
 router.get('/chats/:chatId/messages', getChatMessages);
 router.get('/messages', getAllMessages);

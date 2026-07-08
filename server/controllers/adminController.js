@@ -1,3 +1,4 @@
+import admin from '../config/firebase.js';
 import User from '../models/User.js';
 import Chat from '../models/Chat.js';
 import Message from '../models/Message.js';
@@ -161,6 +162,28 @@ export const deleteChat = async (req, res) => {
   } catch (error) {
     console.error('Admin delete chat error:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const changeUserPassword = async (req, res) => {
+  try {
+    const { newPassword } = req.body;
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    }
+
+    await admin.auth().updateUser(user.firebaseUID, { password: newPassword });
+
+    res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Admin change password error:', error);
+    res.status(500).json({ message: 'Failed to change password' });
   }
 };
 

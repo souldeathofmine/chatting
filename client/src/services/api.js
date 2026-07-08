@@ -28,6 +28,7 @@ api.interceptors.response.use(
 export const authAPI = {
   syncUser: (data) => api.post('/auth/sync-user', data),
   verifyToken: (idToken) => api.post('/auth/verify-token', { idToken }),
+  changePassword: (data) => api.post('/auth/change-password', data),
 };
 
 export const userAPI = {
@@ -42,9 +43,6 @@ export const chatAPI = {
   createChat: (participantId) => api.post('/chats', { participantId }),
   deleteChat: (chatId) => api.delete(`/chats/${chatId}`),
   clearChat: (chatId) => api.delete(`/chats/${chatId}/messages`),
-  uploadFile: (formData) => api.post('/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }),
 };
 
 export const messageAPI = {
@@ -59,6 +57,7 @@ export const adminAPI = {
   getUsers: () => api.get('/admin/users'),
   getUserDetail: (id) => api.get(`/admin/users/${id}`),
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
+  changeUserPassword: (id, data) => api.put(`/admin/users/${id}/change-password`, data),
   getUserChats: (id) => api.get(`/admin/users/${id}/chats`),
   getChatMessages: (chatId, page = 1, limit = 50) =>
     api.get(`/admin/chats/${chatId}/messages?page=${page}&limit=${limit}`),

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { HiArrowLeft, HiTrash, HiChat, HiMail, HiUser, HiShieldCheck, HiChevronRight, HiX, HiEye } from 'react-icons/hi';
+import { HiArrowLeft, HiTrash, HiChat, HiMail, HiUser, HiShieldCheck, HiChevronRight, HiX, HiEye, HiLockClosed } from 'react-icons/hi';
 import { adminAPI } from '../services/api.js';
 import { formatChatTime } from '../utils/formatDate.js';
 
@@ -12,6 +12,9 @@ const AdminPanel = ({ onBack }) => {
   const [chatMessages, setChatMessages] = useState([]);
   const [selectedChat, setSelectedChat] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [adminNewPassword, setAdminNewPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -80,6 +83,25 @@ const AdminPanel = ({ onBack }) => {
       toast.success('Message deleted');
     } catch (err) {
       toast.error('Failed to delete message');
+    }
+  };
+
+  const handleChangeUserPassword = async (e) => {
+    e.preventDefault();
+    if (adminNewPassword.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    try {
+      setChangingPassword(true);
+      await adminAPI.changeUserPassword(selectedUser._id, { newPassword: adminNewPassword });
+      toast.success(`Password changed for ${selectedUser.username}`);
+      setShowPasswordForm(false);
+      setAdminNewPassword('');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to change password');
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -183,6 +205,37 @@ const AdminPanel = ({ onBack }) => {
                     Last seen: {selectedUser.lastSeen ? new Date(selectedUser.lastSeen).toLocaleDateString() : 'Never'}
                   </p>
                 </div>
+              </div>
+
+              <div className="px-4 py-3 border-b border-dark-700">
+                <button
+                  onClick={() => setShowPasswordForm(!showPasswordForm)}
+                  className="flex items-center gap-2 text-sm text-gray-400 hover:text-yellow-400 transition-colors"
+                >
+                  <HiLockClosed className="text-lg" />
+                  {showPasswordForm ? 'Cancel' : 'Change Password'}
+                </button>
+
+                {showPasswordForm && (
+                  <form onSubmit={handleChangeUserPassword} className="mt-3 space-y-3">
+                    <input
+                      type="password"
+                      value={adminNewPassword}
+                      onChange={(e) => setAdminNewPassword(e.target.value)}
+                      placeholder="New password (min 6 chars)"
+                      className="input-field"
+                      required
+                      minLength={6}
+                    />
+                    <button
+                      type="submit"
+                      disabled={changingPassword || !adminNewPassword}
+                      className="btn-primary w-full py-2 text-sm"
+                    >
+                      {changingPassword ? 'Changing...' : `Update ${selectedUser.username}'s Password`}
+                    </button>
+                  </form>
+                )}
               </div>
             </div>
 

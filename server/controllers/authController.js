@@ -41,6 +41,32 @@ export const syncUser = async (req, res) => {
   }
 };
 
+export const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Current password and new password required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'New password must be at least 6 characters' });
+    }
+
+    const userRecord = await admin.auth().getUser(req.firebaseUID);
+    if (!userRecord) {
+      return res.status(404).json({ message: 'User not found in Firebase' });
+    }
+
+    await admin.auth().updateUser(req.firebaseUID, { password: newPassword });
+
+    res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ message: 'Failed to change password' });
+  }
+};
+
 export const verifyToken = async (req, res) => {
   try {
     const { idToken } = req.body;
