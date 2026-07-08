@@ -1,9 +1,28 @@
 import admin from '../config/firebase.js';
 import User from '../models/User.js';
 
+const verifyCaptcha = async (token) => {
+  if (!token) return false;
+  const secret = process.env.TURNSTILE_SECRET_KEY;
+  if (!secret) return false;
+  try {
+    const formData = new URLSearchParams();
+    formData.append('secret', secret);
+    formData.append('response', token);
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      body: formData,
+    });
+    const data = await res.json();
+    return data.success === true;
+  } catch {
+    return false;
+  }
+};
+
 export const syncUser = async (req, res) => {
   try {
-    const { firebaseUID, email, username, photoURL } = req.body;
+    const { firebaseUID, email, username, photoURL, captchaToken } = req.body;
 
     if (!firebaseUID || !email || !username) {
       return res.status(400).json({ message: 'Missing required fields' });
@@ -22,6 +41,11 @@ export const syncUser = async (req, res) => {
       }
       await user.save();
       return res.json({ message: 'User synced', user, isNew: false });
+    }
+
+    const validCaptcha = await verifyCaptcha(captchaToken);
+    if (!validCaptcha) {
+      return res.status(403).json({ message: 'Captcha verification failed. Please try again.' });
     }
 
     user = new User({
