@@ -15,6 +15,7 @@ export const useCall = (userId) => {
   const localStreamRef = useRef(null);
   const pendingCandidatesRef = useRef([]);
   const incomingCallRef = useRef(null);
+  const remoteUserIdRef = useRef(null);
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const callStateRef = useRef('idle');
@@ -50,6 +51,7 @@ export const useCall = (userId) => {
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     pendingCandidatesRef.current = [];
     incomingCallRef.current = null;
+    remoteUserIdRef.current = null;
     resetCall();
   }, [resetCall]);
 
@@ -95,6 +97,7 @@ export const useCall = (userId) => {
         return;
       }
       incomingCallRef.current = { from, callerInfo, offer };
+      remoteUserIdRef.current = from;
       setCallerInfo(callerInfo);
       setIsCaller(false);
       setCallState('ringing');
@@ -103,7 +106,14 @@ export const useCall = (userId) => {
     const handleCallAccepted = ({ answer }) => {
       if (!pcRef.current) return;
       pcRef.current.setRemoteDescription(new RTCSessionDescription(answer))
-        .then(() => setCallState('connected'))
+        .then(() => {
+          for (const candidate of pendingCandidatesRef.current) {
+            pcRef.current.addIceCandidate(new RTCIceCandidate(candidate))
+              .catch((err) => console.error('addIceCandidate error:', err));
+          }
+          pendingCandidatesRef.current = [];
+          setCallState('connected');
+        })
         .catch((err) => {
           console.error('setRemoteDescription error:', err);
           cleanup();
@@ -154,6 +164,7 @@ export const useCall = (userId) => {
       setIsCaller(true);
       setCallerInfo(callerInfo);
       setCallState('calling');
+      remoteUserIdRef.current = remoteUserId;
 
       const pc = createPC(stream, remoteUserId);
       pcRef.current = pc;
@@ -185,8 +196,7 @@ export const useCall = (userId) => {
 
     try {
       const stream = await getMedia(type);
-      setCallType(type);
-      setCallState('connected');
+      remoteUserIdRef.current = incoming.from;
 
       const pc = createPC(stream, incoming.from);
       pcRef.current = pc;
@@ -202,9 +212,12 @@ export const useCall = (userId) => {
       await pc.setLocalDescription(answer);
 
       getSocket()?.emit('call_accepted', { to: incoming.from, answer });
+
+      setCallType(type);
+      setCallState('connected');
     } catch (err) {
       console.error('acceptCall error:', err);
-      toast.error('Failed to accept call');
+      toast.error(err.message || 'Failed to accept call');
       cleanup();
     }
   }, [getMedia, setCallType, setCallState, createPC, cleanup]);
@@ -219,13 +232,8 @@ export const useCall = (userId) => {
 
   const endCall = useCallback(() => {
     const socket = getSocket();
-    if (pcRef.current?.remoteUserId) {
-      socket?.emit('call_ended', { to: pcRef.current.remoteUserId });
-    } else {
-      const incoming = incomingCallRef.current;
-      if (incoming) {
-        socket?.emit('call_ended', { to: incoming.from });
-      }
+    if (remoteUserIdRef.current) {
+      socket?.emit('call_ended', { to: remoteUserIdRef.current });
     }
     cleanup();
   }, [cleanup]);

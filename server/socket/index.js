@@ -169,6 +169,11 @@ export const setupSocket = (httpServer) => {
       io.to(`user:${to}`).emit('call_accepted', { answer });
     });
 
+    socket.on('call_declined', ({ to }) => {
+      if (!socket.userId || !to) return;
+      io.to(`user:${to}`).emit('call_declined', { from: socket.userId });
+    });
+
     socket.on('ice_candidate', ({ to, candidate }) => {
       if (!socket.userId || !to) return;
       io.to(`user:${to}`).emit('ice_candidate', { candidate });
@@ -177,11 +182,6 @@ export const setupSocket = (httpServer) => {
     socket.on('call_ended', ({ to }) => {
       if (!socket.userId || !to) return;
       io.to(`user:${to}`).emit('call_ended', { from: socket.userId });
-    });
-
-    socket.on('call_declined', ({ to }) => {
-      if (!socket.userId || !to) return;
-      io.to(`user:${to}`).emit('call_declined', { from: socket.userId });
     });
 
     socket.on('disconnect', async () => {

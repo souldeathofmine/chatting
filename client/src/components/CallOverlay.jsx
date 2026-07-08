@@ -138,6 +138,7 @@ const CallOverlay = ({ callActions }) => {
             </>
           ) : (
             <div className="flex-1 flex items-center justify-center">
+              <audio ref={callActions.remoteVideoRef} autoPlay />
               <div className="text-center space-y-4">
                 <div className="w-32 h-32 mx-auto rounded-full bg-dark-700 flex items-center justify-center overflow-hidden">
                   {photo ? (
