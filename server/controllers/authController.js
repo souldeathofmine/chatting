@@ -1,9 +1,28 @@
 import admin from '../config/firebase.js';
 import User from '../models/User.js';
 
+const verifyRecaptcha = async (token) => {
+  if (!token) return false;
+  const secret = process.env.RECAPTCHA_SECRET_KEY;
+  if (!secret) return false;
+  try {
+    const params = new URLSearchParams();
+    params.append('secret', secret);
+    params.append('response', token);
+    const res = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+      method: 'POST',
+      body: params,
+    });
+    const data = await res.json();
+    return data.success === true;
+  } catch {
+    return false;
+  }
+};
+
 export const syncUser = async (req, res) => {
   try {
-    const { email, username, photoURL } = req.body;
+    const { email, username, photoURL, captchaToken } = req.body;
     const firebaseUID = req.firebaseUID;
 
     if (!firebaseUID || !email || !username) {
@@ -23,6 +42,11 @@ export const syncUser = async (req, res) => {
       }
       await user.save();
       return res.json({ message: 'User synced', user, isNew: false });
+    }
+
+    const valid = await verifyRecaptcha(captchaToken);
+    if (!valid) {
+      return res.status(403).json({ message: 'Captcha verification failed. Please try again.' });
     }
 
     user = new User({

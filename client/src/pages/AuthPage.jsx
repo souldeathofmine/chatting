@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { FcGoogle } from 'react-icons/fc';
 import { HiMail, HiLockClosed } from 'react-icons/hi';
 import useAuth from '../hooks/useAuth.js';
+import Recaptcha from '../components/Recaptcha.jsx';
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -11,8 +12,9 @@ const AuthPage = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [resetMode, setResetMode] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState(null);
 
-  const { signInWithGoogle, signInWithEmail, registerWithEmail, resetPassword, loading: authLoading } = useAuth();
+  const { signInWithGoogle, signInWithEmail, registerWithEmail, resetPassword, setCaptchaToken: setStoreCaptchaToken, loading: authLoading } = useAuth();
 
   if (authLoading) {
     return (
@@ -55,6 +57,12 @@ const AuthPage = () => {
         await signInWithEmail(email, password);
         toast.success('Logged in!');
       } else {
+        if (!captchaToken) {
+          toast.error('Please complete the captcha');
+          setLoading(false);
+          return;
+        }
+        setStoreCaptchaToken(captchaToken);
         await registerWithEmail(email, password);
         toast.success('Account created!');
       }
@@ -190,9 +198,16 @@ const AuthPage = () => {
               </div>
             )}
 
+            {!isLogin && (
+              <Recaptcha
+                onVerify={(token) => setCaptchaToken(token)}
+                onExpire={() => setCaptchaToken(null)}
+              />
+            )}
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || (!isLogin && !captchaToken)}
               className="btn-primary w-full py-3"
             >
               {loading ? (

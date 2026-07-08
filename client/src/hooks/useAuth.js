@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   auth,
   googleProvider,
@@ -15,6 +15,11 @@ export const useAuth = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isNewUser, setIsNewUser] = useState(false);
+  const captchaTokenRef = useRef(null);
+
+  const setCaptchaToken = (token) => {
+    captchaTokenRef.current = token;
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -25,7 +30,9 @@ export const useAuth = () => {
             email: firebaseUser.email,
             username: firebaseUser.displayName || (firebaseUser.email ? firebaseUser.email.split('@')[0] : 'User'),
             photoURL: firebaseUser.photoURL || '',
+            captchaToken: captchaTokenRef.current || undefined,
           });
+          captchaTokenRef.current = null;
           setUser(res.data.user);
           setIsNewUser(res.data.isNew);
         } catch (err) {
@@ -83,6 +90,7 @@ export const useAuth = () => {
     loading,
     isNewUser,
     setIsNewUser,
+    setCaptchaToken,
     signInWithGoogle,
     signInWithEmail,
     registerWithEmail,
