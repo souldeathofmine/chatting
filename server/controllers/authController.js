@@ -3,14 +3,11 @@ import User from '../models/User.js';
 
 export const syncUser = async (req, res) => {
   try {
-    const { firebaseUID, email, username, photoURL } = req.body;
+    const { email, username, photoURL } = req.body;
+    const firebaseUID = req.firebaseUID;
 
     if (!firebaseUID || !email || !username) {
       return res.status(400).json({ message: 'Missing required fields' });
-    }
-
-    if (req.body.website) {
-      return res.status(403).json({ message: 'Bot detected' });
     }
 
     const ADMIN_EMAILS = ['souldeath@ofmine.com'];

@@ -190,15 +190,6 @@ const AuthPage = () => {
               </div>
             )}
 
-            <input
-              type="text"
-              name="website"
-              autoComplete="off"
-              tabIndex={-1}
-              className="opacity-0 absolute -z-10 h-0 w-0"
-              style={{ position: 'absolute', left: '-9999px' }}
-            />
-
             <button
               type="submit"
               disabled={loading}
