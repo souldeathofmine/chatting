@@ -13,6 +13,7 @@ const ChatPage = () => {
   const user = useStore((s) => s.user);
   const { setUsers, setChats, setCurrentChat, setMessages, setOnlineUsers, currentChat } = useStore();
   const [showProfile, setShowProfile] = useState(false);
+  const [profileUserId, setProfileUserId] = useState(null);
   const [showAdmin, setShowAdmin] = useState(false);
 
   const { emitMessageSeen } = useSocket(user?._id);
@@ -69,9 +70,9 @@ const ChatPage = () => {
 
   return (
     <div className="h-screen flex bg-dark-950 overflow-hidden">
-      <Sidebar onProfileClick={() => setShowProfile(true)} onAdminClick={() => setShowAdmin(true)} />
-      <ChatPanel onProfileClick={() => setShowProfile(true)} />
-      {showProfile && <ProfilePanel onClose={() => setShowProfile(false)} />}
+      <Sidebar onProfileClick={() => { setProfileUserId(null); setShowProfile(true); }} onAdminClick={() => setShowAdmin(true)} />
+      <ChatPanel onProfileClick={(userId) => { setProfileUserId(userId || null); setShowProfile(true); }} />
+      {showProfile && <ProfilePanel onClose={() => setShowProfile(false)} profileUserId={profileUserId} />}
     </div>
   );
 };

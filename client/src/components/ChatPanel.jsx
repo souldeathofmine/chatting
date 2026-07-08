@@ -106,7 +106,7 @@ const ChatPanel = ({ onProfileClick }) => {
 
   const handleViewProfile = () => {
     setShowMenu(false);
-    onProfileClick();
+    onProfileClick(otherUser?._id);
   };
 
   const handleClearChat = async () => {
