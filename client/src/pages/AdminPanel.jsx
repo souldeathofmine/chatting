@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { HiArrowLeft, HiTrash, HiChat, HiMail, HiUser, HiShieldCheck, HiChevronRight, HiX, HiEye, HiLockClosed } from 'react-icons/hi';
+import { HiArrowLeft, HiTrash, HiChat, HiMail, HiUser, HiShieldCheck, HiChevronRight, HiX, HiEye, HiLockClosed, HiPencil } from 'react-icons/hi';
 import { adminAPI } from '../services/api.js';
 import { formatChatTime } from '../utils/formatDate.js';
 
@@ -15,6 +15,10 @@ const AdminPanel = ({ onBack }) => {
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [adminNewPassword, setAdminNewPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [editUsername, setEditUsername] = useState('');
+  const [editBio, setEditBio] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -83,6 +87,35 @@ const AdminPanel = ({ onBack }) => {
       toast.success('Message deleted');
     } catch (err) {
       toast.error('Failed to delete message');
+    }
+  };
+
+  const handleEditProfile = () => {
+    setEditUsername(selectedUser?.username || '');
+    setEditBio(selectedUser?.bio || '');
+    setEditingProfile(true);
+  };
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    if (editUsername.trim().length < 3) {
+      toast.error('Username must be at least 3 characters');
+      return;
+    }
+    try {
+      setSavingProfile(true);
+      const res = await adminAPI.updateUserProfile(selectedUser._id, {
+        username: editUsername.trim(),
+        bio: editBio.trim(),
+      });
+      setSelectedUser(res.data.user);
+      setUsers((prev) => prev.map((u) => (u._id === selectedUser._id ? res.data.user : u)));
+      toast.success('Profile updated');
+      setEditingProfile(false);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setSavingProfile(false);
     }
   };
 
@@ -192,22 +225,60 @@ const AdminPanel = ({ onBack }) => {
                     <span className="text-2xl font-semibold text-primary-400">{selectedUser.username?.charAt(0).toUpperCase()}</span>
                   )}
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-bold">{selectedUser.username}</h2>
-                    {selectedUser.isAdmin && <HiShieldCheck className="text-yellow-500" title="Admin" />}
-                  </div>
-                  <p className="text-sm text-gray-400 flex items-center gap-1"><HiMail className="text-xs" /> {selectedUser.email}</p>
-                  {selectedUser.bio && <p className="text-sm text-gray-500 mt-1">{selectedUser.bio}</p>}
-                  <p className="text-xs text-gray-600 mt-1">UID: {selectedUser.firebaseUID}</p>
-                  <p className="text-xs text-gray-600">
-                    Joined: {new Date(selectedUser.createdAt).toLocaleDateString()} |
-                    Last seen: {selectedUser.lastSeen ? new Date(selectedUser.lastSeen).toLocaleDateString() : 'Never'}
-                  </p>
+                <div className="flex-1 min-w-0">
+                  {editingProfile ? (
+                    <form onSubmit={handleSaveProfile} className="space-y-2">
+                      <input
+                        type="text"
+                        value={editUsername}
+                        onChange={(e) => setEditUsername(e.target.value)}
+                        className="input-field text-sm"
+                        placeholder="Username"
+                        required
+                        minLength={3}
+                        autoFocus
+                      />
+                      <textarea
+                        value={editBio}
+                        onChange={(e) => setEditBio(e.target.value)}
+                        className="input-field text-sm resize-none"
+                        placeholder="Bio (optional)"
+                        rows={2}
+                        maxLength={150}
+                      />
+                      <div className="flex gap-2">
+                        <button type="submit" disabled={savingProfile} className="btn-primary py-1.5 px-3 text-xs">
+                          {savingProfile ? 'Saving...' : 'Save'}
+                        </button>
+                        <button type="button" onClick={() => setEditingProfile(false)} className="py-1.5 px-3 text-xs text-gray-400 hover:text-gray-100 bg-dark-700 rounded-lg">
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-lg font-bold truncate">{selectedUser.username}</h2>
+                        {selectedUser.isAdmin && <HiShieldCheck className="text-yellow-500 flex-shrink-0" title="Admin" />}
+                      </div>
+                      <p className="text-sm text-gray-400 flex items-center gap-1 truncate"><HiMail className="text-xs flex-shrink-0" /> {selectedUser.email}</p>
+                      {selectedUser.bio && <p className="text-sm text-gray-500 mt-1 truncate">{selectedUser.bio}</p>}
+                      <p className="text-xs text-gray-600 mt-1 truncate">UID: {selectedUser.firebaseUID}</p>
+                      <p className="text-xs text-gray-600">
+                        Joined: {new Date(selectedUser.createdAt).toLocaleDateString()} |
+                        Last seen: {selectedUser.lastSeen ? new Date(selectedUser.lastSeen).toLocaleDateString() : 'Never'}
+                      </p>
+                    </>
+                  )}
                 </div>
+                {!editingProfile && (
+                  <button onClick={handleEditProfile} className="p-2 text-gray-500 hover:text-primary-400 hover:bg-dark-700 rounded-lg transition-colors flex-shrink-0 self-start" title="Edit profile">
+                    <HiPencil className="text-lg" />
+                  </button>
+                )}
               </div>
 
-              <div className="px-4 py-3 border-b border-dark-700">
+              <div className="mt-3 border-t border-dark-700 pt-3">
                 <button
                   onClick={() => setShowPasswordForm(!showPasswordForm)}
                   className="flex items-center gap-2 text-sm text-gray-400 hover:text-yellow-400 transition-colors"

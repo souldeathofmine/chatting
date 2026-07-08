@@ -57,6 +57,7 @@ export const adminAPI = {
   getUsers: () => api.get('/admin/users'),
   getUserDetail: (id) => api.get(`/admin/users/${id}`),
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
+  updateUserProfile: (id, data) => api.put(`/admin/users/${id}/profile`, data),
   changeUserPassword: (id, data) => api.put(`/admin/users/${id}/change-password`, data),
   getUserChats: (id) => api.get(`/admin/users/${id}/chats`),
   getChatMessages: (chatId, page = 1, limit = 50) =>

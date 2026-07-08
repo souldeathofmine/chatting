@@ -165,6 +165,29 @@ export const deleteChat = async (req, res) => {
   }
 };
 
+export const updateUserProfile = async (req, res) => {
+  try {
+    const { username, bio } = req.body;
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (username !== undefined && username.trim().length < 3) {
+      return res.status(400).json({ message: 'Username must be at least 3 characters' });
+    }
+
+    if (username !== undefined) user.username = username.trim();
+    if (bio !== undefined) user.bio = bio.trim();
+    await user.save();
+
+    res.json({ message: 'Profile updated', user });
+  } catch (error) {
+    console.error('Admin update profile error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 export const changeUserPassword = async (req, res) => {
   try {
     const { newPassword } = req.body;
