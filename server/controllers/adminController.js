@@ -237,6 +237,15 @@ export const deleteAllNonAdminUsers = async (req, res) => {
       await Chat.findByIdAndDelete(chat._id);
     }
 
+    const singleParticipantChats = await Chat.find({
+      isGlobal: { $ne: true },
+      participants: { $size: 1 },
+    });
+    for (const chat of singleParticipantChats) {
+      await Message.deleteMany({ chatId: chat._id });
+      await Chat.findByIdAndDelete(chat._id);
+    }
+
     await User.deleteMany({ _id: { $in: ids } });
 
     for (const firebaseUID of firebaseUIDs) {

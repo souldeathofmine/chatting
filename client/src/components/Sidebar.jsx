@@ -87,7 +87,10 @@ const Sidebar = ({ onProfileClick, onAdminClick }) => {
     }
   };
 
-  const chatList = sidebarView === 'chats' ? chats : users;
+  const chatList = (sidebarView === 'chats' ? chats : users).filter((item) => {
+    if (sidebarView !== 'chats') return true;
+    return item.isGlobal || item.otherUser;
+  });
   const isUserView = sidebarView === 'users';
 
   const renderUserItem = (item) => {
