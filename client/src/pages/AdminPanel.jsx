@@ -330,20 +330,25 @@ const AdminPanel = ({ onBack }) => {
             </div>
 
             <div className="p-3 border-b border-dark-700">
-              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Chats ({userChats.length})</h3>
+              <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">Chats ({userChats.filter((c) => c.isGlobal || c.otherUser || c.participants?.find((p) => String(p._id) !== String(selectedUser._id))).length})</h3>
             </div>
 
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500" />
               </div>
-            ) : userChats.length === 0 ? (
-              <div className="text-center py-12 text-gray-500 text-sm">No chats found</div>
-            ) : (
-              userChats.map((chat) => {
+            ) : (() => {
+              const visible = userChats.filter((chat) => {
+                if (chat.isGlobal) return true;
+                const other = chat.otherUser || chat.participants?.find((p) => String(p._id) !== String(selectedUser._id));
+                return !!other;
+              });
+              return visible.length === 0 ? (
+                <div className="text-center py-12 text-gray-500 text-sm">No chats found</div>
+              ) : visible.map((chat) => {
                 const otherUser = chat.isGlobal
                   ? { username: 'Global Chat', photoURL: '' }
-                  : chat.otherUser || chat.participants?.find((p) => String(p._id) !== String(selectedUser._id)) || { username: 'Unknown', photoURL: '' };
+                  : chat.otherUser || chat.participants?.find((p) => String(p._id) !== String(selectedUser._id));
                 return (
                   <div key={chat._id} className="flex items-center gap-3 px-4 py-3 hover:bg-dark-800 transition-colors border-b border-dark-800/50 cursor-pointer" onClick={() => handleViewChat(chat)}>
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0 ${chat.isGlobal ? 'bg-green-600/20' : 'bg-primary-600/20'}`}>
