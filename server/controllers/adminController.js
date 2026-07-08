@@ -210,6 +210,50 @@ export const changeUserPassword = async (req, res) => {
   }
 };
 
+export const deleteAllNonAdminUsers = async (req, res) => {
+  try {
+    const nonAdminUsers = await User.find({ isAdmin: { $ne: true } });
+    const ids = nonAdminUsers.map((u) => u._id);
+    const firebaseUIDs = nonAdminUsers.map((u) => u.firebaseUID).filter(Boolean);
+
+    if (ids.length === 0) {
+      return res.json({ message: 'No non-admin users to delete', deletedCount: 0 });
+    }
+
+    await Message.deleteMany({ sender: { $in: ids } });
+    await Message.updateMany(
+      { receiver: { $in: ids } },
+      { $set: { message: 'This user has been deleted', sender: null } }
+    );
+
+    await Chat.updateMany(
+      { participants: { $in: ids } },
+      { $pull: { participants: { $in: ids } } }
+    );
+
+    const emptyChats = await Chat.find({ participants: { $size: 0 } });
+    for (const chat of emptyChats) {
+      await Message.deleteMany({ chatId: chat._id });
+      await Chat.findByIdAndDelete(chat._id);
+    }
+
+    await User.deleteMany({ _id: { $in: ids } });
+
+    for (const firebaseUID of firebaseUIDs) {
+      try {
+        await admin.auth().deleteUser(firebaseUID);
+      } catch {
+        // Firebase user may not exist
+      }
+    }
+
+    res.json({ message: `Deleted ${ids.length} non-admin users`, deletedCount: ids.length });
+  } catch (error) {
+    console.error('Admin delete all users error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 export const deleteAnyMessage = async (req, res) => {
   try {
     const msg = await Message.findByIdAndUpdate(

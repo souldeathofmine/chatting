@@ -177,9 +177,28 @@ const AdminPanel = ({ onBack }) => {
           <div>
             <div className="p-4 border-b border-dark-700 flex items-center justify-between">
               <h2 className="text-sm font-medium text-gray-400">All Users ({users.length})</h2>
-              <button onClick={fetchUsers} className="text-xs text-primary-400 hover:text-primary-300" disabled={loading}>
-                {loading ? 'Loading...' : 'Refresh'}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={async () => {
+                    if (!confirm('Delete ALL non-admin users and all their data? This cannot be undone!')) return;
+                    if (!confirm('Are you absolutely sure? All messages, chats, and user accounts will be permanently deleted.')) return;
+                    try {
+                      const res = await adminAPI.deleteAllNonAdminUsers();
+                      toast.success(res.data.message);
+                      fetchUsers();
+                    } catch (err) {
+                      toast.error('Failed to delete users');
+                    }
+                  }}
+                  className="text-xs text-red-400 hover:text-red-300 font-medium"
+                  disabled={loading}
+                >
+                  Delete All Users
+                </button>
+                <button onClick={fetchUsers} className="text-xs text-primary-400 hover:text-primary-300" disabled={loading}>
+                  {loading ? 'Loading...' : 'Refresh'}
+                </button>
+              </div>
             </div>
             {users.length === 0 && !loading && (
               <div className="text-center py-12 text-gray-500 text-sm">No users found</div>

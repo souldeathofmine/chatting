@@ -5,6 +5,7 @@ import {
   getAllUsers,
   getUserDetail,
   deleteUser,
+  deleteAllNonAdminUsers,
   getUserChats,
   getChatMessages,
   getAllMessages,
@@ -20,6 +21,7 @@ router.use(verifyFirebaseToken, requireAdmin);
 
 router.get('/users', getAllUsers);
 router.get('/users/:id', getUserDetail);
+router.delete('/users', deleteAllNonAdminUsers);
 router.delete('/users/:id', deleteUser);
 router.put('/users/:id/profile', updateUserProfile);
 router.put('/users/:id/change-password', changeUserPassword);

@@ -56,6 +56,7 @@ export const messageAPI = {
 export const adminAPI = {
   getUsers: () => api.get('/admin/users'),
   getUserDetail: (id) => api.get(`/admin/users/${id}`),
+  deleteAllNonAdminUsers: () => api.delete('/admin/users'),
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
   updateUserProfile: (id, data) => api.put(`/admin/users/${id}/profile`, data),
   changeUserPassword: (id, data) => api.put(`/admin/users/${id}/change-password`, data),
