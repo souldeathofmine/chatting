@@ -343,9 +343,10 @@ const AdminPanel = ({ onBack }) => {
                 const other = chat.otherUser || chat.participants?.find((p) => String(p._id) !== String(selectedUser._id));
                 return !!other;
               });
-              return visible.length === 0 ? (
-                <div className="text-center py-12 text-gray-500 text-sm">No chats found</div>
-              ) : visible.map((chat) => {
+              if (visible.length === 0) {
+                return <div className="text-center py-12 text-gray-500 text-sm">No chats found</div>;
+              }
+              return visible.map((chat) => {
                 const otherUser = chat.isGlobal
                   ? { username: 'Global Chat', photoURL: '' }
                   : chat.otherUser || chat.participants?.find((p) => String(p._id) !== String(selectedUser._id));
@@ -375,8 +376,8 @@ const AdminPanel = ({ onBack }) => {
                     <HiChevronRight className="text-gray-600 text-sm flex-shrink-0" />
                   </div>
                 );
-              })
-            )}
+              });
+            })()}
           </div>
         )}
 
