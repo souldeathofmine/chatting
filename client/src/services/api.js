@@ -53,6 +53,11 @@ export const messageAPI = {
   deleteMessage: (id) => api.delete(`/messages/${id}`),
 };
 
+export const callAPI = {
+  createSession: (roomName) => api.post('/calls/session', { roomName }),
+  createToken: (sessionId, data) => api.post('/calls/token', { sessionId, data }),
+};
+
 export const adminAPI = {
   getUsers: () => api.get('/admin/users'),
   getUserDetail: (id) => api.get(`/admin/users/${id}`),

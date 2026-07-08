@@ -19,7 +19,7 @@ const ChatPage = () => {
   const [showAdmin, setShowAdmin] = useState(false);
 
   const { emitMessageSeen } = useSocket(user?._id);
-  const callActions = useCall(user?._id);
+  const callActions = useCall(user);
 
   useEffect(() => {
     if (!user || showAdmin) return;
@@ -71,7 +71,7 @@ const ChatPage = () => {
       <Sidebar onProfileClick={() => { setProfileUserId(null); setShowProfile(true); }} onAdminClick={() => setShowAdmin(true)} />
       <ChatPanel onProfileClick={(userId) => { setProfileUserId(userId || null); setShowProfile(true); }} callActions={callActions} />
       {showProfile && <ProfilePanel onClose={() => setShowProfile(false)} profileUserId={profileUserId} />}
-      <CallOverlay callActions={callActions} user={user} />
+      <CallOverlay callActions={callActions} />
     </div>
   );
 };
