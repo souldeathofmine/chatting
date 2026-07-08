@@ -8,7 +8,7 @@ import MessageInput from './MessageInput.jsx';
 import CallButton from './CallButton.jsx';
 import toast from 'react-hot-toast';
 
-const ChatPanel = ({ onProfileClick, callActions }) => {
+const ChatPanel = ({ onProfileClick, callActions, emitMessageSeen }) => {
   const {
     user,
     currentChat,
@@ -56,7 +56,7 @@ const ChatPanel = ({ onProfileClick, callActions }) => {
   const isGlobal = currentChat?.isGlobal;
 
   const fetchMessages = useCallback(async (pageNum = 1) => {
-    if (!currentChat?._id) return;
+    if (!currentChat?._id || !user) return;
     try {
       setLoadingState(true);
       const res = await messageAPI.getMessages(currentChat._id, pageNum);
@@ -64,6 +64,15 @@ const ChatPanel = ({ onProfileClick, callActions }) => {
 
       if (pageNum === 1) {
         setMessages(newMessages);
+        if (emitMessageSeen) {
+          const myId = user._id;
+          const unreadIds = newMessages
+            .filter((msg) => !msg.seen && msg.sender?._id !== myId && msg.sender !== myId)
+            .map((msg) => msg._id);
+          if (unreadIds.length > 0) {
+            emitMessageSeen({ messageIds: unreadIds, chatId: currentChat._id, userId: myId });
+          }
+        }
       } else {
         setMessages((prev) => [...newMessages, ...prev]);
       }
@@ -75,7 +84,7 @@ const ChatPanel = ({ onProfileClick, callActions }) => {
     } finally {
       setLoadingState(false);
     }
-  }, [currentChat?._id]);
+  }, [currentChat?._id, user?._id, emitMessageSeen]);
 
   useEffect(() => {
     if (currentChat?._id) {

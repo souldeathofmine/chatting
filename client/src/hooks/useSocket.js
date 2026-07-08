@@ -17,14 +17,21 @@ export const useSocket = (userId) => {
     currentChat,
   } = useStore();
 
+  const currentChatRef = useRef(currentChat);
+  currentChatRef.current = currentChat;
+
   useEffect(() => {
     if (!userId) return;
 
     const socket = connectSocket(userId);
 
     socket.on('receive_message', (message) => {
-      if (currentChat?._id === message.chatId) {
+      const chat = currentChatRef.current;
+      if (chat?._id === message.chatId) {
         addMessage(message);
+        if (message._id && message.sender?._id !== userId && message.sender !== userId) {
+          socket.emit('message_seen', { messageIds: [message._id], chatId: message.chatId, userId });
+        }
       }
       updateChatLastMessage(
         message.chatId,
@@ -33,11 +40,11 @@ export const useSocket = (userId) => {
         message.sender._id
       );
 
-      if (currentChat?._id !== message.chatId) {
+      if (chat?._id !== message.chatId) {
         incrementUnread(message.chatId);
       }
 
-      if (Notification.permission === 'granted' && currentChat?._id !== message.chatId) {
+      if (Notification.permission === 'granted' && chat?._id !== message.chatId) {
         const senderName = message.sender?.username || 'Someone';
         new Notification(senderName, {
           body: message.message || (message.messageType === 'image' ? 'Sent an image' : 'Sent a file'),
@@ -86,7 +93,7 @@ export const useSocket = (userId) => {
       socket.off('typing');
       socket.off('stop_typing');
     };
-  }, [userId, currentChat?._id]);
+  }, [userId]);
 
   const emitTyping = (chatId, userId) => {
     const socket = getSocket();

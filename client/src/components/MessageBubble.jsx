@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { HiCheck, HiCheckCircle, HiPencil, HiTrash, HiDownload, HiX } from 'react-icons/hi';
+import { HiCheck, HiCheckCircle, HiClock, HiPencil, HiTrash, HiDownload, HiX } from 'react-icons/hi';
 import { formatMessageTime } from '../utils/formatDate.js';
 import { messageAPI } from '../services/api.js';
 import { getSocket } from '../services/socket.js';
@@ -175,8 +175,18 @@ const MessageBubble = ({ message, isOwn, showSender, isGlobal }) => {
             <span className="text-[10px] opacity-50">(edited)</span>
           )}
           {isOwn && !message.deletedForEveryone && (
-            message.seen ? (
-              <HiCheckCircle className="text-blue-400 text-xs" />
+            !message._id ? (
+              <HiClock className="text-gray-400 text-xs animate-pulse" />
+            ) : message.seen ? (
+              <span className="flex items-center">
+                <HiCheck className="text-blue-400 text-xs" />
+                <HiCheck className="text-blue-400 text-xs -ml-1.5" />
+              </span>
+            ) : message.delivered ? (
+              <span className="flex items-center">
+                <HiCheck className="text-gray-400 text-xs" />
+                <HiCheck className="text-gray-400 text-xs -ml-1.5" />
+              </span>
             ) : (
               <HiCheck className="text-gray-400 text-xs" />
             )

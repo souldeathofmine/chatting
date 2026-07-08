@@ -21,17 +21,33 @@ const useStore = create((set, get) => ({
       chats: typeof chatsOrFn === 'function' ? chatsOrFn(state.chats) : Array.isArray(chatsOrFn) ? chatsOrFn : [],
     })),
   setCurrentChat: (chat) => set({ currentChat: chat }),
-  setMessages: (messages) => set({ messages }),
+  setMessages: (messagesOrFn) =>
+    set((state) => ({
+      messages: typeof messagesOrFn === 'function' ? messagesOrFn(state.messages) : messagesOrFn,
+    })),
   setLoading: (loading) => set({ loading }),
   setSidebarView: (view) => set({ sidebarView: view }),
 
   addMessage: (message) =>
-    set((state) => ({ messages: [...state.messages, message] })),
+    set((state) => {
+      if (message._clientId) {
+        const idx = state.messages.findIndex((m) => m._clientId === message._clientId);
+        if (idx !== -1) {
+          const messages = [...state.messages];
+          messages[idx] = message;
+          return { messages };
+        }
+      }
+      if (message._id && state.messages.some((m) => m._id === message._id)) {
+        return state;
+      }
+      return { messages: [...state.messages, message] };
+    }),
 
   updateMessage: (updatedMessage) =>
     set((state) => ({
       messages: state.messages.map((msg) =>
-        msg._id === updatedMessage._id ? updatedMessage : msg
+        msg._id === updatedMessage._id ? { ...msg, ...updatedMessage } : msg
       ),
     })),
 

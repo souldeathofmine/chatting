@@ -9,8 +9,9 @@ const MessageInput = ({ chatId, receiverId, isGlobal }) => {
   const [showEmoji, setShowEmoji] = useState(false);
   const typingTimeout = useRef(null);
 
-  const { user } = useStore();
+  const { user, addMessage } = useStore();
   const inputRef = useRef(null);
+  const clientIdCounter = useRef(0);
 
   const sendTypingIndicator = useCallback(() => {
     if (isGlobal) return;
@@ -34,7 +35,23 @@ const MessageInput = ({ chatId, receiverId, isGlobal }) => {
       return;
     }
 
+    const _clientId = `${Date.now()}-${++clientIdCounter.current}`;
+
+    const optimisticMessage = {
+      _clientId,
+      chatId,
+      sender: { _id: user._id, username: user.username, photoURL: user.photoURL },
+      message: type === 'text' ? content.trim() : content || '',
+      messageType: type,
+      createdAt: new Date().toISOString(),
+      delivered: false,
+      seen: false,
+      ...extras,
+    };
+    addMessage(optimisticMessage);
+
     const payload = {
+      _clientId,
       chatId,
       sender: user._id,
       message: type === 'text' ? content.trim() : content || '',

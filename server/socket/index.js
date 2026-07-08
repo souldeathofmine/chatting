@@ -51,6 +51,12 @@ export const setupSocket = (httpServer) => {
         if (!chatId || !sender) return;
         if (!isGlobal && !receiver) return;
 
+        const deliverMessage = (msg) => {
+          const msgData = msg.toObject ? msg.toObject() : { ...msg };
+          if (data._clientId) msgData._clientId = data._clientId;
+          return msgData;
+        };
+
         if (isGlobal) {
           const globalChat = await Chat.findOne({ isGlobal: true });
           if (!globalChat) return;
@@ -76,12 +82,14 @@ export const setupSocket = (httpServer) => {
           globalChat.lastSender = sender;
           await globalChat.save();
 
-          io.emit('receive_message', populatedMessage);
+          io.emit('receive_message', deliverMessage(populatedMessage));
           return;
         }
 
         const chat = await Chat.findOne({ _id: chatId, participants: sender });
         if (!chat) return;
+
+        const isReceiverOnline = receiver ? onlineUsers.has(receiver) : false;
 
         const newMessage = await Message.create({
           chatId,
@@ -91,7 +99,7 @@ export const setupSocket = (httpServer) => {
           messageType: messageType || 'text',
           image: image || null,
           file: file || null,
-          delivered: false,
+          delivered: isReceiverOnline,
           seen: false,
         });
 
@@ -104,8 +112,9 @@ export const setupSocket = (httpServer) => {
         chat.lastSender = sender;
         await chat.save();
 
-        io.to(`user:${sender}`).emit('receive_message', populatedMessage);
-        io.to(`user:${receiver}`).emit('receive_message', populatedMessage);
+        const msgData = deliverMessage(populatedMessage);
+        io.to(`user:${sender}`).emit('receive_message', msgData);
+        io.to(`user:${receiver}`).emit('receive_message', msgData);
       } catch (error) {
         console.error('Socket send_message error:', error);
       }
@@ -136,12 +145,23 @@ export const setupSocket = (httpServer) => {
 
     socket.on('message_seen', async ({ messageIds, chatId, userId }) => {
       try {
+        const messages = await Message.find({ _id: { $in: messageIds } }).select('sender');
+
         await Message.updateMany(
           { _id: { $in: messageIds }, receiver: userId },
           { $set: { seen: true } }
         );
 
         io.to(`user:${userId}`).emit('message_seen', { messageIds, chatId });
+
+        const senderIds = [...new Set(
+          messages
+            .filter((m) => m.sender)
+            .map((m) => m.sender.toString())
+        )];
+        senderIds.forEach((senderId) => {
+          io.to(`user:${senderId}`).emit('message_seen', { messageIds, chatId });
+        });
       } catch (error) {
         console.error('Socket message_seen error:', error);
       }
