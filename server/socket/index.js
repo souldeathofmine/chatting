@@ -155,28 +155,24 @@ export const setupSocket = (httpServer) => {
       socket.to(`chat:${chatId}`).emit('stop_typing', { chatId, userId });
     });
 
-    socket.on('call_user', ({ to, callerInfo, offer }) => {
+    socket.on('call_user', ({ to, callerInfo, roomName, callType }) => {
       if (!socket.userId || !to) return;
       io.to(`user:${to}`).emit('incoming_call', {
         from: socket.userId,
         callerInfo,
-        offer,
+        roomName,
+        callType,
       });
     });
 
-    socket.on('call_accepted', ({ to, answer }) => {
+    socket.on('call_accepted', ({ to, roomName, callType }) => {
       if (!socket.userId || !to) return;
-      io.to(`user:${to}`).emit('call_accepted', { answer });
+      io.to(`user:${to}`).emit('call_accepted', { roomName, callType });
     });
 
     socket.on('call_declined', ({ to }) => {
       if (!socket.userId || !to) return;
       io.to(`user:${to}`).emit('call_declined', { from: socket.userId });
-    });
-
-    socket.on('ice_candidate', ({ to, candidate }) => {
-      if (!socket.userId || !to) return;
-      io.to(`user:${to}`).emit('ice_candidate', { candidate });
     });
 
     socket.on('call_ended', ({ to }) => {

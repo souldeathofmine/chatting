@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  HiPhone, HiVideoCamera, HiX, HiMicrophone, HiVolumeOff, HiPhoneMissedCall,
+  HiPhone, HiVideoCamera, HiX, HiPhoneMissedCall,
 } from 'react-icons/hi';
 import useCallStore from '../store/callStore.js';
 
+const JITSI_DOMAIN = 'meet.jit.si';
+
 const CallOverlay = ({ callActions }) => {
-  const { callState, callerInfo, isCaller, callType } = useCallStore();
-  const [muted, setMuted] = useState(false);
-  const [videoOff, setVideoOff] = useState(false);
+  const { callState, callerInfo, isCaller, callType, roomName } = useCallStore();
   const [duration, setDuration] = useState(0);
+  const jitsiContainerRef = useRef(null);
+  const loadedRef = useRef(false);
 
   useEffect(() => {
     if (callState === 'connected') {
@@ -18,12 +20,74 @@ const CallOverlay = ({ callActions }) => {
     setDuration(0);
   }, [callState]);
 
-  useEffect(() => {
-    if (callState === 'idle') {
-      setMuted(false);
-      setVideoOff(false);
+  const loadJitsi = useCallback(() => {
+    if (loadedRef.current || !jitsiContainerRef.current || !roomName) return;
+    if (typeof JitsiMeetExternalAPI === 'undefined') {
+      const script = document.createElement('script');
+      script.src = `https://${JITSI_DOMAIN}/external_api.js`;
+      script.async = true;
+      script.onload = () => initJitsi();
+      document.body.appendChild(script);
+    } else {
+      initJitsi();
     }
-  }, [callState]);
+  }, [roomName]);
+
+  const initJitsi = useCallback(() => {
+    if (loadedRef.current) return;
+    loadedRef.current = true;
+
+    const isVideo = useCallStore.getState().callType === 'video';
+
+    const api = new JitsiMeetExternalAPI(JITSI_DOMAIN, {
+      roomName,
+      parentNode: jitsiContainerRef.current,
+      width: '100%',
+      height: '100%',
+      configOverrides: {
+        startWithAudioMuted: false,
+        startWithVideoMuted: !isVideo,
+        disableDeepLinking: true,
+        disableInviteFunctions: true,
+        doNotStoreRoom: true,
+        prejoinPageEnabled: false,
+        toolbarButtons: [
+          'microphone', 'camera', 'desktop', 'fullscreen',
+          'fodeviceselection', 'hangup', 'chat', 'raisehand',
+          'videoquality', 'filmstrip', 'tileview',
+        ],
+      },
+      interfaceConfigOverrides: {
+        SHOW_JITSI_WATERMARK: false,
+        SHOW_WATERMARK_FOR_GUESTS: false,
+        SHOW_BRAND_WATERMARK: false,
+        TOOLBAR_ALWAYS_VISIBLE: true,
+        DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
+        FILM_STRIP_MAX_HEIGHT: 120,
+      },
+    });
+
+    callActions.jitsiApiRef.current = api;
+
+    api.addListener('videoConferenceLeft', () => {
+      callActions.endCall();
+    });
+
+    api.addListener('readyToClose', () => {
+      callActions.endCall();
+    });
+  }, [roomName, callActions]);
+
+  useEffect(() => {
+    if (callState === 'connected' && roomName) {
+      loadJitsi();
+    }
+    return () => {
+      if (callState !== 'connected') {
+        loadedRef.current = false;
+      }
+    };
+  }, [callState, roomName, loadJitsi]);
 
   const formatDuration = (sec) => {
     const m = Math.floor(sec / 60);
@@ -37,32 +101,8 @@ const CallOverlay = ({ callActions }) => {
   const photo = callerInfo?.photoURL || '';
   const initial = name.charAt(0).toUpperCase();
 
-  const attachStream = (el) => {
-    if (!el) return;
-    if (callActions.remoteStreamRef?.current) {
-      el.srcObject = callActions.remoteStreamRef.current;
-      el.play().catch(() => {});
-    }
-  };
-
-  const handleMute = () => {
-    const result = callActions.toggleMute();
-    if (result !== null) setMuted(!result);
-  };
-
-  const handleVideoToggle = () => {
-    const result = callActions.toggleVideo();
-    if (result !== null) setVideoOff(!result);
-  };
-
   return (
     <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center">
-      <audio
-        ref={(el) => { callActions.remoteVideoRef.current = el; attachStream(el); }}
-        autoPlay
-        className="fixed opacity-0 pointer-events-none -z-10"
-      />
-
       {callState === 'ringing' && !isCaller && (
         <div className="text-center space-y-8">
           <div className="w-28 h-28 mx-auto rounded-full bg-dark-700 flex items-center justify-center overflow-hidden ring-4 ring-green-500/50">
@@ -130,66 +170,11 @@ const CallOverlay = ({ callActions }) => {
 
       {callState === 'connected' && (
         <div className="w-full h-full flex flex-col">
-          {callType === 'video' ? (
-            <>
-              <div className="flex-1 relative bg-black">
-                <video
-                  ref={(el) => { callActions.remoteVideoRef.current = el; attachStream(el); }}
-                  autoPlay
-                  playsInline
-                  className="w-full h-full object-contain"
-                />
-              </div>
-              <div className="absolute top-4 right-4 w-36 h-36 rounded-xl overflow-hidden shadow-xl border-2 border-dark-600 bg-dark-900">
-                <video
-                  ref={(el) => { callActions.localVideoRef.current = el; }}
-                  muted
-                  autoPlay
-                  playsInline
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center space-y-4">
-                <div className="w-32 h-32 mx-auto rounded-full bg-dark-700 flex items-center justify-center overflow-hidden">
-                  {photo ? (
-                    <img src={photo} alt={name} className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-5xl font-bold text-primary-400">{initial}</span>
-                  )}
-                </div>
-                <h2 className="text-2xl font-bold text-white">{name}</h2>
-                <p className="text-gray-400 text-lg font-mono">{formatDuration(duration)}</p>
-              </div>
-            </div>
-          )}
-
-          <div className="flex items-center justify-center gap-6 py-6 bg-black/50">
-            <button
-              onClick={handleMute}
-              className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors shadow-lg ${muted ? 'bg-red-500 text-white' : 'bg-dark-700 text-gray-300 hover:bg-dark-600'}`}
-              title={muted ? 'Unmute' : 'Mute'}
-            >
-              {muted ? <HiVolumeOff className="text-xl" /> : <HiMicrophone className="text-xl" />}
-            </button>
-            {callType === 'video' && (
-              <button
-                onClick={handleVideoToggle}
-                className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors shadow-lg ${videoOff ? 'bg-red-500 text-white' : 'bg-dark-700 text-gray-300 hover:bg-dark-600'}`}
-                title={videoOff ? 'Turn on camera' : 'Turn off camera'}
-              >
-                <HiVideoCamera className="text-xl" />
-              </button>
-            )}
-            <button
-              onClick={callActions.endCall}
-              className="w-14 h-14 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white transition-colors shadow-lg"
-              title="End call"
-            >
-              <HiPhone className="text-xl rotate-[135deg]" />
-            </button>
+          <div className="flex-1 relative bg-black">
+            <div ref={jitsiContainerRef} className="w-full h-full" />
+          </div>
+          <div className="flex items-center justify-center py-3 bg-black/50">
+            <span className="text-white text-sm font-mono">{formatDuration(duration)}</span>
           </div>
         </div>
       )}
