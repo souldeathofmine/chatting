@@ -16,6 +16,7 @@ export const useCall = (userId) => {
   const pendingCandidatesRef = useRef([]);
   const incomingCallRef = useRef(null);
   const remoteUserIdRef = useRef(null);
+  const remoteStreamRef = useRef(null);
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const callStateRef = useRef('idle');
@@ -52,6 +53,7 @@ export const useCall = (userId) => {
     pendingCandidatesRef.current = [];
     incomingCallRef.current = null;
     remoteUserIdRef.current = null;
+    remoteStreamRef.current = null;
     resetCall();
   }, [resetCall]);
 
@@ -69,8 +71,10 @@ export const useCall = (userId) => {
 
     pc.ontrack = (e) => {
       const [remoteStream] = e.streams;
+      remoteStreamRef.current = remoteStream;
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = remoteStream;
+        remoteVideoRef.current.play().catch(() => {});
       }
     };
 
@@ -217,7 +221,13 @@ export const useCall = (userId) => {
       setCallState('connected');
     } catch (err) {
       console.error('acceptCall error:', err);
-      toast.error(err.message || 'Failed to accept call');
+      if (err.name === 'NotFoundError') {
+        toast.error(type === 'video' ? 'Camera not found on your device' : 'Microphone not found on your device');
+      } else if (err.name === 'NotAllowedError') {
+        toast.error('Microphone/camera access denied. Check your browser permissions.');
+      } else {
+        toast.error(err.message || 'Failed to accept call');
+      }
       cleanup();
     }
   }, [getMedia, setCallType, setCallState, createPC, cleanup]);
@@ -269,5 +279,6 @@ export const useCall = (userId) => {
     toggleVideo,
     localVideoRef,
     remoteVideoRef,
+    remoteStreamRef,
   };
 };

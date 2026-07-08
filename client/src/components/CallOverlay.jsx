@@ -37,6 +37,14 @@ const CallOverlay = ({ callActions }) => {
   const photo = callerInfo?.photoURL || '';
   const initial = name.charAt(0).toUpperCase();
 
+  const attachStream = (el) => {
+    if (!el) return;
+    if (callActions.remoteStreamRef?.current) {
+      el.srcObject = callActions.remoteStreamRef.current;
+      el.play().catch(() => {});
+    }
+  };
+
   const handleMute = () => {
     const result = callActions.toggleMute();
     if (result !== null) setMuted(!result);
@@ -49,6 +57,12 @@ const CallOverlay = ({ callActions }) => {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center">
+      <audio
+        ref={(el) => { callActions.remoteVideoRef.current = el; attachStream(el); }}
+        autoPlay
+        className="fixed opacity-0 pointer-events-none -z-10"
+      />
+
       {callState === 'ringing' && !isCaller && (
         <div className="text-center space-y-8">
           <div className="w-28 h-28 mx-auto rounded-full bg-dark-700 flex items-center justify-center overflow-hidden ring-4 ring-green-500/50">
@@ -120,7 +134,7 @@ const CallOverlay = ({ callActions }) => {
             <>
               <div className="flex-1 relative bg-black">
                 <video
-                  ref={callActions.remoteVideoRef}
+                  ref={(el) => { callActions.remoteVideoRef.current = el; attachStream(el); }}
                   autoPlay
                   playsInline
                   className="w-full h-full object-contain"
@@ -128,7 +142,7 @@ const CallOverlay = ({ callActions }) => {
               </div>
               <div className="absolute top-4 right-4 w-36 h-36 rounded-xl overflow-hidden shadow-xl border-2 border-dark-600 bg-dark-900">
                 <video
-                  ref={callActions.localVideoRef}
+                  ref={(el) => { callActions.localVideoRef.current = el; }}
                   muted
                   autoPlay
                   playsInline
@@ -138,7 +152,6 @@ const CallOverlay = ({ callActions }) => {
             </>
           ) : (
             <div className="flex-1 flex items-center justify-center">
-              <audio ref={callActions.remoteVideoRef} autoPlay />
               <div className="text-center space-y-4">
                 <div className="w-32 h-32 mx-auto rounded-full bg-dark-700 flex items-center justify-center overflow-hidden">
                   {photo ? (
