@@ -1,90 +1,162 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { OpenVidu } from 'openvidu-browser';
 import { getSocket } from '../services/socket.js';
-import { callAPI } from '../services/api.js';
 import useCallStore from '../store/callStore.js';
 import toast from 'react-hot-toast';
 
 const generateRoomName = () => {
   const ts = Date.now();
   const r = Math.random().toString(36).substring(2, 8);
-  return `chat-${r}-${ts}`;
+  return `chat_${r}_${ts}`;
 };
+
+const loadSDK = () => new Promise((resolve) => {
+  if (window.VDONinjaSDK) return resolve(window.VDONinjaSDK);
+  const s = document.createElement('script');
+  s.src = 'https://unpkg.com/@vdoninja/sdk/vdoninja-sdk.min.js';
+  s.onload = () => resolve(window.VDONinjaSDK);
+  document.body.appendChild(s);
+});
 
 export const useCall = (user) => {
   const userId = user?._id;
-  const displayName = user?.username || 'Guest';
   const incomingCallRef = useRef(null);
   const remoteUserIdRef = useRef(null);
-  const callStateRef = useRef('idle');
-  const OVRef = useRef(null);
-  const sessionRef = useRef(null);
-  const publisherRef = useRef(null);
+  const vdoRef = useRef(null);
+  const localStreamRef = useRef(null);
+  const remoteStreamRef = useRef(null);
   const localContainerRef = useRef(null);
   const remoteContainerRef = useRef(null);
 
   const { setCallState, setCallerInfo, setIsCaller, setCallType, setRoomName, resetCall } = useCallStore();
 
-  useEffect(() => { callStateRef.current = useCallStore.getState().callState; });
+  const attachStreams = useCallback(() => {
+    if (localStreamRef.current && localContainerRef.current) {
+      localContainerRef.current.srcObject = localStreamRef.current;
+      localContainerRef.current.play().catch(() => {});
+    }
+    if (remoteStreamRef.current && remoteContainerRef.current) {
+      remoteContainerRef.current.srcObject = remoteStreamRef.current;
+      remoteContainerRef.current.play().catch(() => {});
+    }
+  }, []);
 
-  const cleanupOpenVidu = useCallback(() => {
-    if (publisherRef.current) {
-      try { publisherRef.current.stream?.getMediaStream()?.getTracks().forEach(t => t.stop()); } catch {}
-      try { sessionRef.current?.unpublish(publisherRef.current); } catch {}
-      publisherRef.current = null;
+  const cleanupMedia = useCallback(() => {
+    if (vdoRef.current) {
+      try { vdoRef.current.disconnect(); } catch {}
+      vdoRef.current = null;
     }
-    if (sessionRef.current) {
-      try { sessionRef.current.disconnect(); } catch {}
-      sessionRef.current = null;
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(t => t.stop());
+      localStreamRef.current = null;
     }
-    OVRef.current = null;
+    if (remoteStreamRef.current) {
+      remoteStreamRef.current.getTracks().forEach(t => t.stop());
+      remoteStreamRef.current = null;
+    }
+    if (localContainerRef.current) localContainerRef.current.srcObject = null;
+    if (remoteContainerRef.current) remoteContainerRef.current.srcObject = null;
   }, []);
 
   const cleanup = useCallback(() => {
-    cleanupOpenVidu();
+    cleanupMedia();
     incomingCallRef.current = null;
     remoteUserIdRef.current = null;
     resetCall();
-  }, [cleanupOpenVidu, resetCall]);
+  }, [cleanupMedia, resetCall]);
 
-  const connectToSession = useCallback(async (sessionId, token, callType, displayName) => {
-    OVRef.current = new OpenVidu();
-    const session = OVRef.current.initSession();
-    sessionRef.current = session;
+  const initCall = useCallback(async (roomName, type, remoteStreamId) => {
+    const VDONinjaSDK = await loadSDK();
+    const vdo = new VDONinjaSDK();
+    vdoRef.current = vdo;
 
-    session.on('streamCreated', (event) => {
-      const subscriber = session.subscribe(event.stream, remoteContainerRef.current, undefined, {
-        insertMode: 'APPEND',
-        mirror: false,
-      });
-      session.on('streamDestroyed', () => {
-        if (subscriber.stream?.getMediaStream()) {
-          subscriber.stream.getMediaStream().getTracks().forEach(t => t.stop());
-        }
-      });
+    const remoteStream = new MediaStream();
+    remoteStreamRef.current = remoteStream;
+
+    vdo.addEventListener('track', (event) => {
+      remoteStream.addTrack(event.detail.track);
+      if (remoteContainerRef.current) {
+        remoteContainerRef.current.srcObject = remoteStream;
+        remoteContainerRef.current.play().catch(() => {});
+      }
     });
 
-    await session.connect(token, { clientData: displayName });
-
-    const publisher = await OVRef.current.initPublisherAsync(localContainerRef.current, {
-      publishAudio: true,
-      publishVideo: callType === 'video',
-      resolution: '640x480',
-      frameRate: 30,
-      insertMode: 'APPEND',
-      mirror: true,
+    const localStream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: type === 'video',
     });
+    localStreamRef.current = localStream;
 
-    await session.publish(publisher);
-    publisherRef.current = publisher;
-  }, []);
+    attachStreams();
+
+    await vdo.connect();
+    await vdo.joinRoom({ room: roomName });
+    await vdo.publish(localStream, { room: roomName, streamID: userId });
+
+    if (remoteStreamId) {
+      await vdo.view(remoteStreamId, { audio: true, video: true });
+    }
+  }, [userId, attachStreams]);
+
+  const startCall = useCallback(async (remoteUserId, type, callerInfo) => {
+    if (useCallStore.getState().callState !== 'idle') return;
+    const roomName = generateRoomName();
+    remoteUserIdRef.current = remoteUserId;
+    setCallType(type);
+    setIsCaller(true);
+    setCallerInfo(callerInfo);
+    setRoomName(roomName);
+    setCallState('calling');
+
+    try {
+      await initCall(roomName, type, null);
+      setCallState('connected');
+      getSocket()?.emit('call_user', {
+        to: remoteUserId,
+        callerInfo: { _id: userId, ...callerInfo },
+        roomName,
+        callType: type,
+      });
+    } catch (err) {
+      toast.error('Failed to start call');
+      cleanup();
+    }
+  }, [userId, setCallType, setIsCaller, setCallerInfo, setRoomName, setCallState, initCall, cleanup]);
+
+  const acceptCall = useCallback(async (type) => {
+    const incoming = incomingCallRef.current;
+    if (!incoming) return;
+    if (useCallStore.getState().callState !== 'ringing') return;
+    setCallType(type);
+    setCallState('calling');
+
+    try {
+      await initCall(incoming.roomName, type, incoming.from);
+      setCallState('connected');
+      getSocket()?.emit('call_accepted', { to: incoming.from, roomName: incoming.roomName, callType: type });
+    } catch (err) {
+      toast.error('Failed to accept call');
+      cleanup();
+    }
+  }, [userId, setCallType, setCallState, initCall, cleanup]);
+
+  const declineCall = useCallback(() => {
+    const incoming = incomingCallRef.current;
+    if (incoming) getSocket()?.emit('call_declined', { to: incoming.from });
+    cleanup();
+  }, [cleanup]);
+
+  const endCall = useCallback(() => {
+    const socket = getSocket();
+    if (remoteUserIdRef.current) socket?.emit('call_ended', { to: remoteUserIdRef.current });
+    cleanup();
+  }, [cleanup]);
 
   useEffect(() => {
     if (!userId) return;
     const socket = getSocket();
     if (!socket) return;
 
-    const handleIncomingCall = async ({ from, callerInfo, roomName }) => {
+    const handleIncomingCall = ({ from, callerInfo, roomName }) => {
       if (useCallStore.getState().callState !== 'idle') {
         socket.emit('call_declined', { to: from });
         return;
@@ -97,9 +169,14 @@ export const useCall = (user) => {
       setCallState('ringing');
     };
 
-    const handleCallAccepted = () => {
+    const handleCallAccepted = async () => {
       if (!remoteUserIdRef.current) return;
       setCallState('connected');
+      if (vdoRef.current) {
+        try {
+          await vdoRef.current.view(remoteUserIdRef.current, { audio: true, video: true });
+        } catch {}
+      }
     };
 
     const handleCallEnded = () => {
@@ -125,65 +202,6 @@ export const useCall = (user) => {
       cleanup();
     };
   }, [userId, setCallState, setCallerInfo, setIsCaller, setRoomName, cleanup]);
-
-  const startCall = useCallback(async (remoteUserId, type, callerInfo) => {
-    if (useCallStore.getState().callState !== 'idle') return;
-    const roomName = generateRoomName();
-    remoteUserIdRef.current = remoteUserId;
-    setCallType(type);
-    setIsCaller(true);
-    setCallerInfo(callerInfo);
-    setRoomName(roomName);
-    setCallState('calling');
-
-    try {
-      const sessionRes = await callAPI.createSession(roomName);
-      const tokenRes = await callAPI.createToken(sessionRes.data.sessionId, JSON.stringify({ userId }));
-      await connectToSession(sessionRes.data.sessionId, tokenRes.data.token, type, displayName);
-
-      setCallState('connected');
-      getSocket()?.emit('call_user', {
-        to: remoteUserId,
-        callerInfo: { _id: userId, ...callerInfo },
-        roomName,
-        callType: type,
-      });
-    } catch (err) {
-      toast.error('Failed to start call');
-      cleanup();
-    }
-  }, [userId, setCallType, setIsCaller, setCallerInfo, setRoomName, setCallState, connectToSession, cleanup]);
-
-  const acceptCall = useCallback(async (type) => {
-    const incoming = incomingCallRef.current;
-    if (!incoming) return;
-    if (useCallStore.getState().callState !== 'ringing') return;
-    setCallType(type);
-    setCallState('calling');
-
-    try {
-      const tokenRes = await callAPI.createToken(incoming.roomName, JSON.stringify({ userId }));
-      await connectToSession(incoming.roomName, tokenRes.data.token, type, displayName);
-
-      setCallState('connected');
-      getSocket()?.emit('call_accepted', { to: incoming.from, roomName: incoming.roomName, callType: type });
-    } catch (err) {
-      toast.error('Failed to accept call');
-      cleanup();
-    }
-  }, [userId, setCallType, setCallState, connectToSession, cleanup]);
-
-  const declineCall = useCallback(() => {
-    const incoming = incomingCallRef.current;
-    if (incoming) getSocket()?.emit('call_declined', { to: incoming.from });
-    cleanup();
-  }, [cleanup]);
-
-  const endCall = useCallback(() => {
-    const socket = getSocket();
-    if (remoteUserIdRef.current) socket?.emit('call_ended', { to: remoteUserIdRef.current });
-    cleanup();
-  }, [cleanup]);
 
   return { startCall, acceptCall, declineCall, endCall, localContainerRef, remoteContainerRef };
 };

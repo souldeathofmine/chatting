@@ -10,13 +10,8 @@ const CallOverlay = ({ callActions }) => {
   const photo = callerInfo?.photoURL || '';
   const initial = name.charAt(0).toUpperCase();
 
-  const showVideo = callState === 'connected' || callState === 'connecting';
-
   return (
     <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center">
-      <div ref={callActions.remoteContainerRef} className={`absolute inset-0 ${showVideo ? '' : 'hidden'}`} />
-      <div ref={callActions.localContainerRef} className={`absolute top-4 right-4 w-48 h-36 rounded-lg overflow-hidden border-2 border-white/20 shadow-lg z-10 ${showVideo ? '' : 'hidden'}`} />
-
       {callState === 'ringing' && !isCaller && (
         <div className="text-center space-y-8">
           <div className="w-28 h-28 mx-auto rounded-full bg-dark-700 flex items-center justify-center overflow-hidden ring-4 ring-green-500/50">
@@ -83,9 +78,15 @@ const CallOverlay = ({ callActions }) => {
       )}
 
       {callState === 'connected' && (
-        <button onClick={callActions.endCall} className="absolute bottom-8 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white transition-colors shadow-lg z-10" title="End call">
-          <HiX className="text-2xl" />
-        </button>
+        <div className="w-full h-full relative bg-black">
+          <video ref={callActions.remoteContainerRef} className="w-full h-full object-contain" autoPlay playsInline />
+          <div className="absolute top-4 right-4 w-48 h-36 rounded-lg overflow-hidden border-2 border-white/20 shadow-lg">
+            <video ref={callActions.localContainerRef} className="w-full h-full object-cover" autoPlay playsInline muted />
+          </div>
+          <button onClick={callActions.endCall} className="absolute bottom-8 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white transition-colors shadow-lg z-10" title="End call">
+            <HiX className="text-2xl" />
+          </button>
+        </div>
       )}
     </div>
   );
