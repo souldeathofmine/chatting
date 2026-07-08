@@ -23,7 +23,7 @@ services:
       - key: CLIENT_URL
         value: https://firebase-chat-client.onrender.com
       - key: SERVER_URL
-        value: https://firebase-chat-server.onrender.com
+        value: https://chatting-tnrc.onrender.com
       - key: PORT
         value: 5000
 
@@ -49,7 +49,7 @@ services:
       - key: VITE_FIREBASE_APP_ID
         sync: false
       - key: VITE_API_URL
-        value: https://firebase-chat-server.onrender.com
+        value: https://chatting-tnrc.onrender.com/api
     headers:
       - path: /*
         name: Cache-Control
