@@ -13,17 +13,12 @@ export const useCall = (userId) => {
   const incomingCallRef = useRef(null);
   const remoteUserIdRef = useRef(null);
   const callStateRef = useRef('idle');
-  const jitsiApiRef = useRef(null);
 
   const { setCallState, setCallerInfo, setIsCaller, setCallType, setRoomName, resetCall } = useCallStore();
 
   useEffect(() => { callStateRef.current = useCallStore.getState().callState; });
 
   const cleanup = useCallback(() => {
-    if (jitsiApiRef.current) {
-      try { jitsiApiRef.current.dispose(); } catch {}
-      jitsiApiRef.current = null;
-    }
     incomingCallRef.current = null;
     remoteUserIdRef.current = null;
     resetCall();
@@ -115,13 +110,5 @@ export const useCall = (userId) => {
     cleanup();
   }, [cleanup]);
 
-  return {
-    startCall, acceptCall, declineCall, endCall,
-    jitsiApiRef,
-    localVideoRef: { current: null },
-    remoteVideoRef: { current: null },
-    remoteStreamRef: { current: null },
-    toggleMute: () => {},
-    toggleVideo: () => {},
-  };
+  return { startCall, acceptCall, declineCall, endCall };
 };

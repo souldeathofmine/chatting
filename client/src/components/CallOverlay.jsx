@@ -1,102 +1,46 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   HiPhone, HiVideoCamera, HiX, HiPhoneMissedCall,
 } from 'react-icons/hi';
 import useCallStore from '../store/callStore.js';
 
-const JITSI_DOMAIN = 'meet.jit.si';
-
 const CallOverlay = ({ callActions, user }) => {
   const { callState, callerInfo, isCaller, callType, roomName } = useCallStore();
-  const [duration, setDuration] = useState(0);
-  const jitsiContainerRef = useRef(null);
-  const loadedRef = useRef(false);
+  const containerRef = useRef(null);
+  const apiRef = useRef(null);
 
   useEffect(() => {
-    if (callState === 'connected') {
-      const timer = setInterval(() => setDuration((d) => d + 1), 1000);
-      return () => clearInterval(timer);
-    }
-    setDuration(0);
-  }, [callState]);
+    if (callState !== 'connected' || !roomName || !containerRef.current) return;
 
-  const loadJitsi = useCallback(() => {
-    if (loadedRef.current || !jitsiContainerRef.current || !roomName) return;
-    if (typeof JitsiMeetExternalAPI === 'undefined') {
-      const script = document.createElement('script');
-      script.src = `https://${JITSI_DOMAIN}/external_api.js`;
-      script.async = true;
-      script.onload = () => initJitsi();
-      document.body.appendChild(script);
-    } else {
-      initJitsi();
-    }
-  }, [roomName]);
-
-  const initJitsi = useCallback(() => {
-    if (loadedRef.current) return;
-    loadedRef.current = true;
-
-    const isVideo = useCallStore.getState().callType === 'video';
-
-    const api = new JitsiMeetExternalAPI(JITSI_DOMAIN, {
-      roomName,
-      parentNode: jitsiContainerRef.current,
-      width: '100%',
-      height: '100%',
-      userInfo: {
-        displayName: user?.username || 'Guest',
-      },
-      configOverwrite: {
-        startWithAudioMuted: false,
-        startWithVideoMuted: !isVideo,
-        disableDeepLinking: true,
-        disableInviteFunctions: true,
-        doNotStoreRoom: true,
-        prejoinPageEnabled: false,
-        toolbarButtons: [
-          'microphone', 'camera', 'desktop', 'fullscreen',
-          'fodeviceselection', 'hangup', 'chat', 'raisehand',
-          'videoquality', 'filmstrip', 'tileview',
-        ],
-      },
-      interfaceConfigOverrides: {
-        SHOW_JITSI_WATERMARK: false,
-        SHOW_WATERMARK_FOR_GUESTS: false,
-        SHOW_BRAND_WATERMARK: false,
-        TOOLBAR_ALWAYS_VISIBLE: true,
-        DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
-        FILM_STRIP_MAX_HEIGHT: 120,
-      },
-    });
-
-    callActions.jitsiApiRef.current = api;
-
-    api.addListener('videoConferenceLeft', () => {
-      callActions.endCall();
-    });
-
-    api.addListener('readyToClose', () => {
-      callActions.endCall();
-    });
-  }, [roomName, callActions]);
-
-  useEffect(() => {
-    if (callState === 'connected' && roomName) {
-      loadJitsi();
-    }
-    return () => {
-      if (callState !== 'connected') {
-        loadedRef.current = false;
-      }
+    const script = document.createElement('script');
+    script.src = 'https://meet.jit.si/external_api.js';
+    script.async = true;
+    script.onload = () => {
+      const isVideo = callType === 'video';
+      apiRef.current = new JitsiMeetExternalAPI('meet.jit.si', {
+        roomName,
+        width: '100%',
+        height: '100%',
+        parentNode: containerRef.current,
+        userInfo: { displayName: user?.username || 'Guest' },
+        configOverwrite: {
+          startWithAudioMuted: false,
+          startWithVideoMuted: !isVideo,
+        },
+      });
+      apiRef.current.addListener('videoConferenceLeft', callActions.endCall);
+      apiRef.current.addListener('readyToClose', callActions.endCall);
     };
-  }, [callState, roomName, loadJitsi]);
+    document.body.appendChild(script);
 
-  const formatDuration = (sec) => {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  };
+    return () => {
+      if (apiRef.current) {
+        try { apiRef.current.dispose(); } catch {}
+        apiRef.current = null;
+      }
+      if (script.parentNode) script.parentNode.removeChild(script);
+    };
+  }, [callState, roomName, callType, user?.username, callActions.endCall]);
 
   if (callState === 'idle') return null;
 
@@ -120,31 +64,16 @@ const CallOverlay = ({ callActions, user }) => {
             <p className="text-gray-400 mt-1">Incoming {callType === 'video' ? 'video' : 'voice'} call...</p>
           </div>
           <div className="flex items-center justify-center gap-6">
-            <button
-              onClick={() => callActions.acceptCall('audio')}
-              className="w-16 h-16 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center text-white transition-colors shadow-lg"
-              title="Accept (audio)"
-            >
+            <button onClick={() => callActions.acceptCall('audio')} className="w-16 h-16 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center text-white transition-colors shadow-lg" title="Accept (audio)">
               <HiPhone className="text-2xl" />
             </button>
-            <button
-              onClick={() => callActions.acceptCall('video')}
-              className="w-16 h-16 rounded-full bg-primary-500 hover:bg-primary-600 flex items-center justify-center text-white transition-colors shadow-lg"
-              title="Accept (video)"
-            >
+            <button onClick={() => callActions.acceptCall('video')} className="w-16 h-16 rounded-full bg-primary-500 hover:bg-primary-600 flex items-center justify-center text-white transition-colors shadow-lg" title="Accept (video)">
               <HiVideoCamera className="text-2xl" />
             </button>
-            <button
-              onClick={callActions.declineCall}
-              className="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white transition-colors shadow-lg"
-              title="Decline"
-            >
+            <button onClick={callActions.declineCall} className="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white transition-colors shadow-lg" title="Decline">
               <HiPhoneMissedCall className="text-2xl" />
             </button>
           </div>
-          <p className="text-xs text-gray-500">
-            Accept with audio <HiPhone className="inline text-green-500" /> or video <HiVideoCamera className="inline text-primary-500" />
-          </p>
         </div>
       )}
 
@@ -161,30 +90,15 @@ const CallOverlay = ({ callActions, user }) => {
             <h2 className="text-2xl font-bold text-white">{name}</h2>
             <p className="text-gray-400 mt-1">Calling...</p>
           </div>
-          <button
-            onClick={callActions.endCall}
-            className="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white transition-colors shadow-lg mx-auto"
-            title="Cancel"
-          >
+          <button onClick={callActions.endCall} className="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white transition-colors shadow-lg mx-auto" title="Cancel">
             <HiX className="text-2xl" />
           </button>
         </div>
       )}
 
       {callState === 'connected' && (
-        <div className="w-full h-full flex flex-col">
-          <div className="flex-1 relative bg-black">
-            <div ref={jitsiContainerRef} className="w-full h-full" />
-          </div>
-          <div className="flex items-center justify-center py-3 bg-black/50">
-            <span className="text-white text-sm font-mono">{formatDuration(duration)}</span>
-          </div>
-        </div>
-      )}
-
-      {callState === 'ringing' && !isCaller && (
-        <div className="fixed inset-0 pointer-events-none flex items-center justify-center">
-          <div className="w-28 h-28 rounded-full border-4 border-green-500/30 animate-ping absolute" />
+        <div className="w-full h-full">
+          <div ref={containerRef} className="w-full h-full" />
         </div>
       )}
     </div>
