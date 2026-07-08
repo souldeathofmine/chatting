@@ -200,7 +200,7 @@ const AdminPanel = ({ onBack }) => {
               userChats.map((chat) => {
                 const otherUser = chat.isGlobal
                   ? { username: 'Global Chat', photoURL: '' }
-                  : chat.participants?.find((p) => p._id !== selectedUser._id) || { username: 'Unknown', photoURL: '' };
+                  : chat.otherUser || chat.participants?.find((p) => String(p._id) !== String(selectedUser._id)) || { username: 'Unknown', photoURL: '' };
                 return (
                   <div key={chat._id} className="flex items-center gap-3 px-4 py-3 hover:bg-dark-800 transition-colors border-b border-dark-800/50 cursor-pointer" onClick={() => handleViewChat(chat)}>
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0 ${chat.isGlobal ? 'bg-green-600/20' : 'bg-primary-600/20'}`}>

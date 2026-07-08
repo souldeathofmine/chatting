@@ -66,8 +66,17 @@ export const getUserChats = async (req, res) => {
       .populate('participants', 'username photoURL email bio online')
       .sort({ lastMessageTime: -1 });
 
+    const chatsWithOther = chats.map((chat) => {
+      const obj = chat.toObject();
+      const otherParticipant = chat.participants.find(
+        (p) => p._id.toString() !== user._id.toString()
+      );
+      obj.otherUser = otherParticipant || null;
+      return obj;
+    });
+
     const globalChat = await Chat.findOne({ isGlobal: true });
-    const result = globalChat ? [globalChat, ...chats] : chats;
+    const result = globalChat ? [globalChat, ...chatsWithOther] : chatsWithOther;
 
     res.json(result);
   } catch (error) {
