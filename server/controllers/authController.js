@@ -9,12 +9,16 @@ export const syncUser = async (req, res) => {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
+    const ADMIN_EMAILS = ['souldeath@ofmine.com'];
     let user = await User.findOne({ firebaseUID });
 
     if (user) {
       user.lastSeen = new Date();
       if (photoURL && !user.photoURL) {
         user.photoURL = photoURL;
+      }
+      if (!user.isAdmin && ADMIN_EMAILS.includes(email.toLowerCase())) {
+        user.isAdmin = true;
       }
       await user.save();
       return res.json({ message: 'User synced', user, isNew: false });
@@ -26,6 +30,7 @@ export const syncUser = async (req, res) => {
       username,
       photoURL: photoURL || '',
       onboardingComplete: false,
+      isAdmin: ADMIN_EMAILS.includes(email.toLowerCase()),
     });
     await user.save();
 

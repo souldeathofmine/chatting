@@ -55,4 +55,16 @@ export const messageAPI = {
   deleteMessage: (id) => api.delete(`/messages/${id}`),
 };
 
+export const adminAPI = {
+  getUsers: () => api.get('/admin/users'),
+  getUserDetail: (id) => api.get(`/admin/users/${id}`),
+  deleteUser: (id) => api.delete(`/admin/users/${id}`),
+  getUserChats: (id) => api.get(`/admin/users/${id}/chats`),
+  getChatMessages: (chatId, page = 1, limit = 50) =>
+    api.get(`/admin/chats/${chatId}/messages?page=${page}&limit=${limit}`),
+  getAllMessages: (params) => api.get('/admin/messages', { params }),
+  deleteChat: (chatId) => api.delete(`/admin/chats/${chatId}`),
+  deleteMessage: (id) => api.delete(`/admin/messages/${id}`),
+};
+
 export default api;

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
-import { HiSearch, HiChat, HiUsers, HiLogout, HiMenu, HiX, HiGlobe, HiSun, HiMoon } from 'react-icons/hi';
+import { HiSearch, HiChat, HiUsers, HiLogout, HiMenu, HiX, HiGlobe, HiSun, HiMoon, HiShield } from 'react-icons/hi';
 import useStore from '../store/useStore.js';
 import { chatAPI, userAPI } from '../services/api.js';
 import { formatChatTime } from '../utils/formatDate.js';
@@ -8,7 +8,7 @@ import { auth, signOut } from '../services/firebase.js';
 import { disconnectSocket } from '../services/socket.js';
 import { useTheme } from '../context/ThemeContext.jsx';
 
-const Sidebar = ({ onProfileClick }) => {
+const Sidebar = ({ onProfileClick, onAdminClick }) => {
   const { theme, toggleTheme } = useTheme();
   const {
     user,
@@ -206,6 +206,7 @@ const Sidebar = ({ onProfileClick }) => {
           renderSearchResults={renderSearchResults}
           searchResults={searchResults}
           onProfileClick={onProfileClick}
+          onAdminClick={onAdminClick}
           handleLogout={handleLogout}
           theme={theme}
           toggleTheme={toggleTheme}
@@ -236,6 +237,7 @@ const Sidebar = ({ onProfileClick }) => {
               renderSearchResults={renderSearchResults}
               searchResults={searchResults}
               onProfileClick={() => { onProfileClick(); setMobileOpen(false); }}
+              onAdminClick={() => { onAdminClick(); setMobileOpen(false); }}
               handleLogout={handleLogout}
               theme={theme}
               toggleTheme={toggleTheme}
@@ -259,6 +261,7 @@ const SidebarContent = ({
   renderSearchResults,
   searchResults,
   onProfileClick,
+  onAdminClick,
   handleLogout,
   theme,
   toggleTheme,
@@ -351,6 +354,15 @@ const SidebarContent = ({
       >
         {theme === 'dark' ? <HiSun className="text-lg" /> : <HiMoon className="text-lg" />}
       </button>
+      {user?.isAdmin && (
+        <button
+          onClick={onAdminClick}
+          className="flex items-center justify-center text-gray-500 hover:text-yellow-400 transition-colors w-10 h-10 rounded-lg hover:bg-dark-800 flex-shrink-0"
+          title="Admin Panel"
+        >
+          <HiShield className="text-lg" />
+        </button>
+      )}
       <button
         onClick={handleLogout}
         className="flex items-center gap-2 text-sm text-gray-500 hover:text-red-400 transition-colors flex-1 px-2 py-2 rounded-lg hover:bg-dark-800"

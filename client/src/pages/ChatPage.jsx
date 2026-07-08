@@ -6,17 +6,19 @@ import { chatAPI, userAPI } from '../services/api.js';
 import Sidebar from '../components/Sidebar.jsx';
 import ChatPanel from '../components/ChatPanel.jsx';
 import ProfilePanel from '../components/ProfilePanel.jsx';
+import AdminPanel from './AdminPanel.jsx';
 import { getSocket } from '../services/socket.js';
 
 const ChatPage = () => {
   const user = useStore((s) => s.user);
   const { setUsers, setChats, setCurrentChat, setMessages, setOnlineUsers, currentChat } = useStore();
   const [showProfile, setShowProfile] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
 
   const { emitMessageSeen } = useSocket(user?._id);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || showAdmin) return;
 
     const fetchData = async () => {
       try {
@@ -38,7 +40,7 @@ const ChatPage = () => {
     };
 
     fetchData();
-  }, [user]);
+  }, [user, showAdmin]);
 
   useEffect(() => {
     if (!currentChat?._id) return;
@@ -61,9 +63,13 @@ const ChatPage = () => {
 
   if (!user) return null;
 
+  if (showAdmin) {
+    return <AdminPanel onBack={() => setShowAdmin(false)} />;
+  }
+
   return (
     <div className="h-screen flex bg-dark-950 overflow-hidden">
-      <Sidebar onProfileClick={() => setShowProfile(true)} />
+      <Sidebar onProfileClick={() => setShowProfile(true)} onAdminClick={() => setShowAdmin(true)} />
       <ChatPanel onProfileClick={() => setShowProfile(true)} />
       {showProfile && <ProfilePanel onClose={() => setShowProfile(false)} />}
     </div>
