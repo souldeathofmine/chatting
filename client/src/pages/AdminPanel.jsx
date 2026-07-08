@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { HiArrowLeft, HiTrash, HiChat, HiMail, HiUser, HiShield, HiChevronRight, HiX, HiEye } from 'react-icons/hi';
+import { HiArrowLeft, HiTrash, HiChat, HiMail, HiUser, HiShieldCheck, HiChevronRight, HiX, HiEye } from 'react-icons/hi';
 import { adminAPI } from '../services/api.js';
 import { formatChatTime } from '../utils/formatDate.js';
 
@@ -141,7 +141,7 @@ const AdminPanel = ({ onBack }) => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-sm truncate">{u.username}</span>
-                    {u.isAdmin && <HiShield className="text-yellow-500 text-sm flex-shrink-0" title="Admin" />}
+                    {u.isAdmin && <HiShieldCheck className="text-yellow-500 text-sm flex-shrink-0" title="Admin" />}
                     <span className={`w-2 h-2 rounded-full flex-shrink-0 ${u.online ? 'bg-green-500' : 'bg-gray-600'}`} />
                   </div>
                   <p className="text-xs text-gray-500 truncate">{u.email}</p>
@@ -173,7 +173,7 @@ const AdminPanel = ({ onBack }) => {
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-lg font-bold">{selectedUser.username}</h2>
-                    {selectedUser.isAdmin && <HiShield className="text-yellow-500" title="Admin" />}
+                    {selectedUser.isAdmin && <HiShieldCheck className="text-yellow-500" title="Admin" />}
                   </div>
                   <p className="text-sm text-gray-400 flex items-center gap-1"><HiMail className="text-xs" /> {selectedUser.email}</p>
                   {selectedUser.bio && <p className="text-sm text-gray-500 mt-1">{selectedUser.bio}</p>}

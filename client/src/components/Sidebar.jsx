@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
-import { HiSearch, HiChat, HiUsers, HiLogout, HiMenu, HiX, HiGlobe, HiSun, HiMoon, HiShield } from 'react-icons/hi';
+import { HiSearch, HiChat, HiUsers, HiLogout, HiMenu, HiX, HiGlobe, HiSun, HiMoon, HiShieldCheck } from 'react-icons/hi';
 import useStore from '../store/useStore.js';
 import { chatAPI, userAPI } from '../services/api.js';
 import { formatChatTime } from '../utils/formatDate.js';
@@ -360,7 +360,7 @@ const SidebarContent = ({
           className="flex items-center justify-center text-gray-500 hover:text-yellow-400 transition-colors w-10 h-10 rounded-lg hover:bg-dark-800 flex-shrink-0"
           title="Admin Panel"
         >
-          <HiShield className="text-lg" />
+          <HiShieldCheck className="text-lg" />
         </button>
       )}
       <button
