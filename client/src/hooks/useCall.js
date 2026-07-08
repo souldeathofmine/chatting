@@ -162,8 +162,34 @@ export const useCall = (userId) => {
 
   const startCall = useCallback(async (remoteUserId, type, callerInfo) => {
     if (callStateRef.current !== 'idle') return;
+
+    let stream;
     try {
-      const stream = await getMedia(type);
+      stream = await getMedia(type);
+    } catch (err) {
+      if (type === 'video' && err.name === 'NotFoundError') {
+        try {
+          stream = await getMedia('audio');
+        } catch {
+          console.error('startCall fallback audio error:', err);
+          toast.error('No microphone found on your device');
+          cleanup();
+          return;
+        }
+      } else {
+        if (err.name === 'NotAllowedError') {
+          toast.error('Microphone/camera access denied');
+        } else if (err.name === 'NotFoundError') {
+          toast.error(type === 'video' ? 'Camera not found' : 'Microphone not found');
+        } else {
+          toast.error('Failed to start call');
+        }
+        cleanup();
+        return;
+      }
+    }
+
+    try {
       setCallType(type);
       setIsCaller(true);
       setCallerInfo(callerInfo);
@@ -182,13 +208,8 @@ export const useCall = (userId) => {
         offer,
       });
     } catch (err) {
-      if (err.name === 'NotAllowedError') {
-        toast.error('Microphone/camera access denied');
-      } else if (err.name === 'NotFoundError') {
-        toast.error(type === 'video' ? 'Camera not found' : 'Microphone not found');
-      } else {
-        toast.error('Failed to start call');
-      }
+      console.error('startCall error:', err);
+      toast.error('Failed to start call');
       cleanup();
     }
   }, [userId, getMedia, setCallType, setIsCaller, setCallerInfo, setCallState, createPC, cleanup]);
@@ -198,8 +219,34 @@ export const useCall = (userId) => {
     if (!incoming) return;
     if (callStateRef.current !== 'ringing') return;
 
+    let stream;
     try {
-      const stream = await getMedia(type);
+      stream = await getMedia(type);
+    } catch (err) {
+      if (type === 'video' && err.name === 'NotFoundError') {
+        try {
+          stream = await getMedia('audio');
+        } catch {
+          console.error('acceptCall fallback audio error:', err);
+          toast.error('No microphone found on your device');
+          cleanup();
+          return;
+        }
+      } else {
+        console.error('acceptCall getMedia error:', err);
+        if (err.name === 'NotFoundError') {
+          toast.error(type === 'video' ? 'Camera not found on your device' : 'Microphone not found on your device');
+        } else if (err.name === 'NotAllowedError') {
+          toast.error('Microphone/camera access denied. Check your browser permissions.');
+        } else {
+          toast.error(err.message || 'Failed to access microphone/camera');
+        }
+        cleanup();
+        return;
+      }
+    }
+
+    try {
       remoteUserIdRef.current = incoming.from;
 
       const pc = createPC(stream, incoming.from);
@@ -221,13 +268,7 @@ export const useCall = (userId) => {
       setCallState('connected');
     } catch (err) {
       console.error('acceptCall error:', err);
-      if (err.name === 'NotFoundError') {
-        toast.error(type === 'video' ? 'Camera not found on your device' : 'Microphone not found on your device');
-      } else if (err.name === 'NotAllowedError') {
-        toast.error('Microphone/camera access denied. Check your browser permissions.');
-      } else {
-        toast.error(err.message || 'Failed to accept call');
-      }
+      toast.error(err.message || 'Failed to accept call');
       cleanup();
     }
   }, [getMedia, setCallType, setCallState, createPC, cleanup]);
