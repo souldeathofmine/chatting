@@ -137,7 +137,7 @@ const MessageBubble = ({ message, isOwn, showSender, isGlobal }) => {
             value={editText}
             onChange={(e) => setEditText(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="flex-1 bg-dark-800 border border-dark-600 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-primary-500"
+            className="flex-1 bg-dark-800 border border-dark-600 rounded px-2 py-1 text-sm text-gray-100 focus:outline-none focus:border-primary-500"
           />
           <button onClick={handleEdit} className="text-primary-400 hover:text-primary-300">
             <HiCheck className="text-lg" />
