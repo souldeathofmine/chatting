@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { getSocket } from '../services/socket.js';
 import useCallStore from '../store/callStore.js';
 import toast from 'react-hot-toast';
+import { playRingtone, stopRingtone, playConnected, playDisconnected, stopAll } from '../utils/callSounds.js';
 
 const generateRoomName = () => {
   const ts = Date.now();
@@ -64,6 +65,7 @@ export const useCall = (user) => {
   }, [callState, attachStreams]);
 
   const cleanup = useCallback(() => {
+    stopAll();
     cleanupMedia();
     incomingCallRef.current = null;
     remoteUserIdRef.current = null;
@@ -92,17 +94,28 @@ export const useCall = (user) => {
     });
 
     const localStream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-      video: type === 'video',
+      audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 24000 },
+      video: type === 'video' ? {
+        width: { ideal: 640 },
+        height: { ideal: 480 },
+        frameRate: { ideal: 24 },
+      } : false,
     });
     localStreamRef.current = localStream;
 
     await vdo.connect();
     await vdo.joinRoom({ room: roomName });
-    await vdo.publish(localStream, { room: roomName, streamID: userId });
+
+    const pubOpts = { room: roomName, streamID: userId };
+    if (type === 'video') {
+      pubOpts.videoBitrate = 400000;
+      pubOpts.resolution = '640x480';
+    }
+    pubOpts.audioBitrate = 32000;
+    await vdo.publish(localStream, pubOpts);
 
     if (remoteStreamId) {
-      await vdo.view(remoteStreamId, { audio: true, video: true });
+      await vdo.view(remoteStreamId, { audio: true, video: true, videoBitrate: 400000 });
     }
   }, [userId, attachStreams]);
 
@@ -121,7 +134,7 @@ export const useCall = (user) => {
       setCallState('connected');
       getSocket()?.emit('call_user', {
         to: remoteUserId,
-        callerInfo: { _id: userId, ...callerInfo },
+        caller: { _id: userId, ...callerInfo },
         roomName,
         callType: type,
       });
@@ -167,7 +180,7 @@ export const useCall = (user) => {
     const socket = getSocket();
     if (!socket) return;
 
-    const handleIncomingCall = ({ from, callerInfo, roomName }) => {
+    const handleIncomingCall = ({ from, callerInfo, roomName, callType }) => {
       if (useCallStore.getState().callState !== 'idle') {
         socket.emit('call_declined', { to: from });
         return;
@@ -176,26 +189,33 @@ export const useCall = (user) => {
       remoteUserIdRef.current = from;
       setRoomName(roomName);
       setCallerInfo(callerInfo);
+      setCallType(callType || 'audio');
       setIsCaller(false);
       setCallState('ringing');
+      playRingtone();
     };
 
     const handleCallAccepted = async () => {
       if (!remoteUserIdRef.current) return;
+      stopRingtone();
       setCallState('connected');
+      playConnected();
       if (vdoRef.current) {
         try {
-          await vdoRef.current.view(remoteUserIdRef.current, { audio: true, video: true });
+          await vdoRef.current.view(remoteUserIdRef.current, { audio: true, video: true, videoBitrate: 400000 });
         } catch {}
       }
     };
 
     const handleCallEnded = () => {
+      playDisconnected();
       toast('Call ended');
       cleanup();
     };
 
     const handleCallDeclined = () => {
+      stopRingtone();
+      playDisconnected();
       toast('Call declined');
       cleanup();
     };

@@ -48,7 +48,6 @@ export const chatAPI = {
 export const messageAPI = {
   getMessages: (chatId, page = 1, limit = 50) =>
     api.get(`/messages/${chatId}?page=${page}&limit=${limit}`),
-  sendMessage: (data) => api.post('/messages', data),
   editMessage: (id, message) => api.put(`/messages/${id}`, { message }),
   deleteMessage: (id) => api.delete(`/messages/${id}`),
 };

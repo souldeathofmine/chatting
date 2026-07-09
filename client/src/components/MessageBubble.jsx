@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { HiCheck, HiCheckCircle, HiClock, HiPencil, HiTrash, HiDownload, HiX } from 'react-icons/hi';
+import { HiCheck, HiClock, HiPencil, HiTrash, HiDownload, HiX } from 'react-icons/hi';
 import { formatMessageTime } from '../utils/formatDate.js';
 import { messageAPI } from '../services/api.js';
 import { getSocket } from '../services/socket.js';
@@ -26,12 +26,18 @@ const MessageBubble = ({ message, isOwn, showSender, isGlobal }) => {
       setEditing(false);
       return;
     }
+    const socket = getSocket();
+    if (!socket) {
+      toast.error('Not connected');
+      return;
+    }
     try {
-      const res = await messageAPI.editMessage(message._id, editText.trim());
-      const socket = getSocket();
-      if (socket) {
-        socket.emit('message_edited', res.data);
-      }
+      await messageAPI.editMessage(message._id, editText.trim());
+      socket.emit('message_edited', {
+        msgId: message._id,
+        chatId: message.chatId,
+        message: editText.trim(),
+      });
       setEditing(false);
     } catch (err) {
       toast.error('Failed to edit message');

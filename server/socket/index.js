@@ -120,6 +120,24 @@ export const setupSocket = (httpServer) => {
       }
     });
 
+    socket.on('message_edited', async ({ msgId, chatId, message }) => {
+      try {
+        await Message.findByIdAndUpdate(msgId, { $set: { message, edited: true } });
+        const chat = await Chat.findById(chatId);
+        if (!chat) return;
+        const payload = { msgId, chatId, message };
+        if (chat.isGlobal) {
+          io.emit('message_edited', payload);
+        } else {
+          chat.participants.forEach((pid) => {
+            io.to(`user:${pid}`).emit('message_edited', payload);
+          });
+        }
+      } catch (error) {
+        console.error('Socket message_edited error:', error);
+      }
+    });
+
     socket.on('message_deleted', async ({ msgId, chatId }) => {
       try {
         const chat = await Chat.findById(chatId);

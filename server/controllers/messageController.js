@@ -7,7 +7,6 @@ export const getMessages = async (req, res) => {
     const { page = 1, limit = 50 } = req.query;
 
     const chat = await Chat.findById(chatId);
-
     if (!chat) {
       return res.status(404).json({ message: 'Chat not found' });
     }
@@ -53,55 +52,6 @@ export const getMessages = async (req, res) => {
     });
   } catch (error) {
     console.error('Get messages error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
-export const sendMessage = async (req, res) => {
-  try {
-    const { chatId, receiver, message, messageType, image, file } = req.body;
-
-    if (!chatId || !receiver) {
-      return res.status(400).json({ message: 'Chat ID and receiver required' });
-    }
-
-    if (!message && !image && !file) {
-      return res.status(400).json({ message: 'Message content required' });
-    }
-
-    const chat = await Chat.findOne({
-      _id: chatId,
-      participants: req.user._id,
-    });
-
-    if (!chat) {
-      return res.status(404).json({ message: 'Chat not found' });
-    }
-
-    const newMessage = await Message.create({
-      chatId,
-      sender: req.user._id,
-      receiver,
-      message: message || '',
-      messageType: messageType || 'text',
-      image: image || null,
-      file: file || null,
-      delivered: false,
-      seen: false,
-    });
-
-    chat.lastMessage = message || (messageType === 'image' ? '📷 Image' : '📎 File');
-    chat.lastMessageTime = new Date();
-    chat.lastSender = req.user._id;
-    await chat.save();
-
-    const populatedMessage = await Message.findById(newMessage._id)
-      .populate('sender', 'username photoURL')
-      .populate('receiver', 'username photoURL');
-
-    res.status(201).json(populatedMessage);
-  } catch (error) {
-    console.error('Send message error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -179,22 +129,6 @@ export const deleteMessage = async (req, res) => {
     });
   } catch (error) {
     console.error('Delete message error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
-export const markAsSeen = async (req, res) => {
-  try {
-    const { chatId, messageIds } = req.body;
-
-    await Message.updateMany(
-      { _id: { $in: messageIds }, receiver: req.user._id },
-      { $set: { seen: true } }
-    );
-
-    res.json({ message: 'Messages marked as seen' });
-  } catch (error) {
-    console.error('Mark as seen error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
