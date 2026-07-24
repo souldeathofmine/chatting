@@ -36,7 +36,7 @@ export const useAuth = () => {
           setUser(res.data.user);
           setIsNewUser(res.data.isNew);
         } catch (err) {
-          console.error('syncUser failed, using fallback:', err.message);
+          console.error('syncUser failed:', err.response?.data || err.message);
           const fallbackUser = {
             _id: firebaseUser.uid,
             firebaseUID: firebaseUser.uid,
@@ -48,7 +48,8 @@ export const useAuth = () => {
             onboardingComplete: false,
           };
           setUser(fallbackUser);
-          setIsNewUser(false);
+          setIsNewUser(true);
+          toast.error(err.response?.data?.message || 'Failed to sync account');
         }
       } else {
         setUser(null);

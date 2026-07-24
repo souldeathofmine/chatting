@@ -45,7 +45,7 @@ export const syncUser = async (req, res) => {
     }
 
     const valid = await verifyRecaptcha(captchaToken);
-    if (!valid) {
+    if (!valid && req.firebaseProvider === 'password') {
       return res.status(403).json({ message: 'Captcha verification failed. Please try again.' });
     }
 

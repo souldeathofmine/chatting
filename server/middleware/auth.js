@@ -27,6 +27,7 @@ export const verifyFirebaseToken = async (req, res, next) => {
 
     req.user = user;
     req.firebaseUID = decodedToken.uid;
+    req.firebaseProvider = decodedToken.firebase?.sign_in_provider;
     next();
   } catch (error) {
     console.error('Auth middleware error:', error.message);
@@ -40,6 +41,35 @@ export const verifyFirebaseTokenLax = async (req, res, next) => {
     if (!decodedToken) return;
 
     req.firebaseUID = decodedToken.uid;
+    req.firebaseProvider = decodedToken.firebase?.sign_in_provider;
+    next();
+  } catch (error) {
+    console.error('Auth middleware error:', error.message);
+    return res.status(503).json({ message: 'Service unavailable' });
+  }
+};
+
+export const resolveOrCreateUser = async (req, res, next) => {
+  try {
+    const decodedToken = await getDecodedToken(req, res);
+    if (!decodedToken) return;
+
+    req.firebaseUID = decodedToken.uid;
+    req.firebaseProvider = decodedToken.firebase?.sign_in_provider;
+
+    let user = await User.findOne({ firebaseUID: decodedToken.uid });
+    if (!user) {
+      user = new User({
+        firebaseUID: decodedToken.uid,
+        email: decodedToken.email || '',
+        username: decodedToken.name || decodedToken.email?.split('@')[0] || 'User',
+        photoURL: decodedToken.picture || '',
+        onboardingComplete: false,
+      });
+      await user.save();
+    }
+
+    req.user = user;
     next();
   } catch (error) {
     console.error('Auth middleware error:', error.message);

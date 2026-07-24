@@ -43,7 +43,8 @@ const ProfilePanel = ({ onClose, profileUserId }) => {
       setUser(res.data.user);
       toast.success('Profile updated');
     } catch (err) {
-      toast.error('Failed to update profile');
+      console.error('Profile save error:', err);
+      toast.error(err.response?.data?.message || 'Failed to update profile');
     } finally {
       setSaving(false);
     }

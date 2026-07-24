@@ -39,7 +39,8 @@ const OnboardingPage = () => {
       toast.success('Profile complete!');
       navigate('/chat', { replace: true });
     } catch (err) {
-      toast.error('Failed to save profile');
+      console.error('Onboarding save error:', err.response?.data || err.message);
+      toast.error(err.response?.data?.message || 'Failed to save profile');
     } finally {
       setSaving(false);
     }
