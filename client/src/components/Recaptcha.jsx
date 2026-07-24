@@ -5,6 +5,10 @@ const SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 const Recaptcha = ({ onVerify, onExpire }) => {
   const ref = useRef(null);
   const widgetId = useRef(null);
+  const onVerifyRef = useRef(onVerify);
+  const onExpireRef = useRef(onExpire);
+  onVerifyRef.current = onVerify;
+  onExpireRef.current = onExpire;
 
   useEffect(() => {
     if (!SITE_KEY || !ref.current) return;
@@ -12,11 +16,12 @@ const Recaptcha = ({ onVerify, onExpire }) => {
     const render = () => {
       if (widgetId.current != null) {
         grecaptcha.reset(widgetId.current);
+        return;
       }
       widgetId.current = grecaptcha.render(ref.current, {
         sitekey: SITE_KEY,
-        callback: onVerify,
-        'expired-callback': onExpire,
+        callback: (token) => onVerifyRef.current?.(token),
+        'expired-callback': () => onExpireRef.current?.(),
       });
     };
 
@@ -36,7 +41,7 @@ const Recaptcha = ({ onVerify, onExpire }) => {
         try { grecaptcha.reset(widgetId.current); } catch {}
       }
     };
-  }, [onVerify, onExpire]);
+  }, []);
 
   if (!SITE_KEY) return null;
 
